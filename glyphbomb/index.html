@@ -409,7 +409,7 @@
   <h2 class="mb-title">Motion blur <span>(temporary)</span></h2>
   <label class="switch-row">
     <span>On (mbOn)</span>
-    <input type="checkbox" id="mb-on" role="switch">
+    <input type="checkbox" id="mb-on" role="switch" checked>
   </label>
   <label>
     <span>Shutter (mbShutter)</span>
@@ -523,13 +523,13 @@
     waveGlow: 0.06,    // how much the wave brightens glyphs
     // Motion blur (experimental): moving glyphs are smeared back along their
     // path, and the whole frame can leave fading trails.
-    mbOn: false,
-    mbShutter: 0.025,  // exposure time in seconds; smear length = speed x this
+    mbOn: true,
+    mbShutter: 0.02,   // exposure time in seconds; smear length = speed x this
     mbSamples: 2,      // 2 = one stretched smear; more adds layered smears (slower)
-    mbMinSpeed: 60,    // slower than this (px/s) and there's no smear
-    mbMaxLen: 90,      // longest smear in px
+    mbMinSpeed: 210,   // slower than this (px/s) and there's no smear
+    mbMaxLen: 210,     // longest smear in px
     mbTail: 0.55,      // opacity of the smear relative to the glyph
-    mbTrails: 0,       // share of the last frame kept each frame (0 = none)
+    mbTrails: 0.35,    // share of the last frame kept each frame (0 = none)
     // Space: slam the table. Everything jumps, the screen shakes, tiles
     // scatter and tumble, then find their way back.
     slamLift: 1.7,     // how high glyphs jump
