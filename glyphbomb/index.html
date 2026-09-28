@@ -114,10 +114,23 @@
   .tuning-group { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
   .tuning-group[hidden] { display: none; }
   /* Temporary motion blur panel, top right, always open. */
-  .mb-panel { position: fixed; top: 16px; right: 16px; gap: 10px; }
+  .dev-col {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mb-panel { gap: 10px; }
   /* Size ramp panel, centre right. */
-  .ramp-panel { position: fixed; top: 50%; right: 16px; transform: translateY(-50%); gap: 10px; }
+  .ramp-panel { gap: 10px; }
   .ramp-panel[hidden] { display: none; }
+  /* Wind panel, top left under the frame rate. */
+  .wind-panel { position: fixed; top: 40px; left: 16px; gap: 10px; max-height: calc(100vh - 140px); overflow-y: auto; }
+  .wind-panel[hidden] { display: none; }
   .mb-panel[hidden] { display: none; }
   .mb-title { font-weight: 600; color: var(--menu-ink); }
   .mb-title span { font-weight: 400; color: var(--menu-ink-soft); }
@@ -310,6 +323,7 @@
 <div class="actions" aria-label="Actions">
   <div class="action"><kbd id="k-shift"><span class="k-label">shift</span></kbd><span class="plus">+</span><kbd id="k-click"><span class="k-label">click</span></kbd><span>Stamp</span></div>
   <div class="action"><kbd id="k-space"><span class="k-label">space</span></kbd><span>Rage</span></div>
+  <div class="action"><kbd id="k-scroll"><span class="k-label">scroll</span></kbd><span>Wind</span></div>
 </div>
 <div class="side">
 <div class="tuning" id="tuning" aria-label="Variables">
@@ -407,40 +421,92 @@
   </div>
 </div>
 </div>
-<!-- Size ramp: how glyphs grow toward the cursor. -->
-<div class="tuning ramp-panel" id="ramp-panel" aria-label="Size ramp" hidden>
-  <h2 class="mb-title">Size ramp</h2>
+<!-- Wind (scroll) tuning. -->
+<div class="tuning wind-panel" id="wind-panel" aria-label="Wind" hidden>
+  <h2 class="mb-title">Wind</h2>
   <label>
-    <span>Largest size (maxSize)</span>
-    <output data-for="maxSize"></output>
-    <input type="range" data-config="maxSize" min="4" max="30" step="0.5" data-suffix="px">
+    <span>Strength per scroll (windGain)</span>
+    <output data-for="windGain"></output>
+    <input type="range" data-config="windGain" min="0.0005" max="0.015" step="0.0005" data-digits="4">
   </label>
   <label>
-    <span>Resting size (minSize)</span>
-    <output data-for="minSize"></output>
-    <input type="range" data-config="minSize" min="0.5" max="10" step="0.1" data-suffix="px">
+    <span>Fade while scrolling (windDecay)</span>
+    <output data-for="windDecay"></output>
+    <input type="range" data-config="windDecay" min="0" max="8" step="0.1">
   </label>
   <label>
-    <span>Full-size depth (inner)</span>
-    <output data-for="inner"></output>
-    <input type="range" data-config="inner" min="0" max="200" step="1" data-digits="0" data-suffix="px">
+    <span>Settle speed (windRecover)</span>
+    <output data-for="windRecover"></output>
+    <input type="range" data-config="windRecover" min="1" max="30" step="0.5">
   </label>
   <label>
-    <span>Reach outside edge (outer)</span>
-    <output data-for="outer"></output>
-    <input type="range" data-config="outer" min="0" max="300" step="1" data-digits="0" data-suffix="px">
+    <span>Swing downwind (windTurn)</span>
+    <output data-for="windTurn"></output>
+    <input type="range" data-config="windTurn" min="0" max="2" step="0.05" data-digits="2">
   </label>
   <label>
-    <span>Curve (rampCurve)</span>
-    <output data-for="rampCurve"></output>
-    <input type="range" data-config="rampCurve" min="0.2" max="4" step="0.05" data-digits="2">
+    <span>Flutter (windFlutter)</span>
+    <output data-for="windFlutter"></output>
+    <input type="range" data-config="windFlutter" min="0" max="1.5" step="0.05" data-digits="2">
   </label>
   <label>
-    <span>Shape size (shapeSize)</span>
-    <output data-for="shapeSize"></output>
-    <input type="range" data-config="shapeSize" min="120" max="900" step="5" data-digits="0" data-suffix="px">
+    <span>Flutter speed (windFlutterHz)</span>
+    <output data-for="windFlutterHz"></output>
+    <input type="range" data-config="windFlutterHz" min="0.2" max="10" step="0.1" data-suffix="Hz">
+  </label>
+  <label>
+    <span>Curl (windCurl)</span>
+    <output data-for="windCurl"></output>
+    <input type="range" data-config="windCurl" min="0" max="3" step="0.05" data-digits="2">
+  </label>
+  <label>
+    <span>Stretch (windStretch)</span>
+    <output data-for="windStretch"></output>
+    <input type="range" data-config="windStretch" min="0" max="2" step="0.05" data-digits="2">
+  </label>
+  <label>
+    <span>Gust size (windGustSize)</span>
+    <output data-for="windGustSize"></output>
+    <input type="range" data-config="windGustSize" min="80" max="1500" step="10" data-digits="0" data-suffix="px">
+  </label>
+  <label>
+    <span>Air speed (windSpeed)</span>
+    <output data-for="windSpeed"></output>
+    <input type="range" data-config="windSpeed" min="0" max="1500" step="10" data-digits="0">
+  </label>
+  <label>
+    <span>Carry (windPush)</span>
+    <output data-for="windPush"></output>
+    <input type="range" data-config="windPush" min="0" max="12" step="0.1">
+  </label>
+  <label>
+    <span>Turbulence (windTurbulence)</span>
+    <output data-for="windTurbulence"></output>
+    <input type="range" data-config="windTurbulence" min="0" max="2" step="0.05" data-digits="2">
+  </label>
+  <label>
+    <span>Wall eddies (eddyStrength)</span>
+    <output data-for="eddyStrength"></output>
+    <input type="range" data-config="eddyStrength" min="0" max="4" step="0.05" data-digits="2">
+  </label>
+  <label>
+    <span>Eddy width (eddySize)</span>
+    <output data-for="eddySize"></output>
+    <input type="range" data-config="eddySize" min="60" max="800" step="10" data-digits="0" data-suffix="px">
+  </label>
+  <label>
+    <span>Eddy depth (eddyDepth)</span>
+    <output data-for="eddyDepth"></output>
+    <input type="range" data-config="eddyDepth" min="20" max="300" step="5" data-digits="0" data-suffix="px">
+  </label>
+  <label>
+    <span>Eddy build-up (eddyBuildMs)</span>
+    <output data-for="eddyBuildMs"></output>
+    <input type="range" data-config="eddyBuildMs" min="0" max="3000" step="50" data-digits="0" data-suffix="ms">
   </label>
 </div>
+<!-- Tuning panels on the right stack in a column that scrolls if needed. -->
+<div class="dev-col">
 <!-- Temporary: motion blur playground. -->
 <div class="tuning mb-panel" id="mb-panel" aria-label="Motion blur (temporary)" hidden>
   <h2 class="mb-title">Motion blur <span>(temporary)</span></h2>
@@ -478,6 +544,41 @@
     <output data-for="mbTrails"></output>
     <input type="range" data-config="mbTrails" min="0" max="0.95" step="0.05" data-format="percent">
   </label>
+</div>
+<!-- Size ramp: how glyphs grow toward the cursor. -->
+<div class="tuning ramp-panel" id="ramp-panel" aria-label="Size ramp" hidden>
+  <h2 class="mb-title">Size ramp</h2>
+  <label>
+    <span>Largest size (maxSize)</span>
+    <output data-for="maxSize"></output>
+    <input type="range" data-config="maxSize" min="4" max="30" step="0.5" data-suffix="px">
+  </label>
+  <label>
+    <span>Resting size (minSize)</span>
+    <output data-for="minSize"></output>
+    <input type="range" data-config="minSize" min="0.5" max="10" step="0.1" data-suffix="px">
+  </label>
+  <label>
+    <span>Full-size depth (inner)</span>
+    <output data-for="inner"></output>
+    <input type="range" data-config="inner" min="0" max="200" step="1" data-digits="0" data-suffix="px">
+  </label>
+  <label>
+    <span>Reach outside edge (outer)</span>
+    <output data-for="outer"></output>
+    <input type="range" data-config="outer" min="0" max="300" step="1" data-digits="0" data-suffix="px">
+  </label>
+  <label>
+    <span>Curve (rampCurve)</span>
+    <output data-for="rampCurve"></output>
+    <input type="range" data-config="rampCurve" min="0.2" max="4" step="0.05" data-digits="2">
+  </label>
+  <label>
+    <span>Shape size (shapeSize)</span>
+    <output data-for="shapeSize"></output>
+    <input type="range" data-config="shapeSize" min="120" max="900" step="5" data-digits="0" data-suffix="px">
+  </label>
+</div>
 </div>
 <script>
   // Tunables. Values are CSS pixels.
@@ -576,6 +677,35 @@
     slamShakeMs: 500,  // how long the shake lasts
     slamFlightMs: 700, // time scattered before heading home
     slamReturn: 2,     // how much faster slammed glyphs fly, fall and return
+    // Wind (scroll): scrolling whips up a breeze blowing the way you scroll.
+    // Glyphs stay pinned in place, like paper ribbons stuck to a wall: they
+    // swing downwind, stretch out and flutter, with gusts rolling across.
+    windGain: 0.004,   // wind added per unit of scroll
+    windDecay: 1.6,    // how quickly the wind fades while you keep scrolling
+    windStopMs: 90,    // no scroll for this long counts as stopped
+    windRecover: 9,    // how quickly everything settles once scrolling stops
+    windTurn: 1,       // how far tips swing to point downwind
+    windFlutter: 0.45, // flutter swing, in radians
+    windFlutterHz: 3.2, // flutter speed
+    windCurl: 1.1,     // how much ribbons curl (3D flip) as they flutter
+    windStretch: 0.7,  // how much they stretch along the wind
+    windGustSize: 420, // size of the gusts rolling across the wall, px
+    windSpeed: 420,    // speed of the air carrying loose glyphs, px/s
+    windPush: 3,       // how quickly loose glyphs pick up the air's speed (drag)
+    windTurbulence: 0.6, // sideways buffeting, as a share of the air speed
+    // Near the downwind edge the air rolls into vortices (like wind eddying
+    // off a wall). They build up the longer the wind keeps blowing, until
+    // glyphs pinned at the wall get swept along it and flung back out, then
+    // blown in again.
+    eddyStrength: 1.8, // strength of the rolls at full build-up (1.2+ lets glyphs escape)
+    eddySize: 260,     // width of each roll along the wall, px
+    eddyDepth: 90,     // how far the rolls reach out from the wall, px
+    eddyBuildMs: 700,  // how long the wind must blow for the rolls to fully form
+    // Edges in the wind act like a wall meeting paper or leaves: almost no
+    // bounce, a scrape along the wall, and a flip and tumble on impact.
+    leafBounce: 0.12,  // speed kept bouncing off the wall
+    leafScrape: 0.7,   // speed kept sliding along the wall on impact
+    leafFlip: 0.05,    // how much an impact flips the glyph over (per px/s)
     uiShake: 0.3,      // share of the shake the menu and panel get
     // Keep raging (more than chillAfter presses in a row) and the glyphs
     // line up to spell "chill", hold it, then drift calmly home.
@@ -832,10 +962,10 @@
   // along its path (as if the shutter stayed open for mbShutter seconds),
   // then the glyph itself. Each extra sample is one more stretched copy, so
   // 2 samples costs just one extra draw per moving glyph.
-  function drawMoving(img, x, y, size, a, alpha, rx, ry, vx, vy) {
+  function drawMoving(img, x, y, size, a, alpha, rx, ry, vx, vy, sux = 0, suy = 0, st = 1) {
     const sp = Math.hypot(vx, vy);
     if (!CONFIG.mbOn || sp < CONFIG.mbMinSpeed || CONFIG.mbSamples < 2) {
-      drawGlyph(img, x, y, size, a, alpha, rx, ry);
+      drawGlyph(img, x, y, size, a, alpha, rx, ry, sux, suy, st);
       return;
     }
     const len = Math.min(sp * CONFIG.mbShutter, CONFIG.mbMaxLen);
@@ -845,7 +975,7 @@
       drawGlyph(img, x - ux * l / 2, y - uy * l / 2, size, a, alpha * CONFIG.mbTail / n, rx, ry,
         ux, uy, 1 + l / Math.max(size, 1));
     }
-    drawGlyph(img, x, y, size, a, alpha, rx, ry);
+    drawGlyph(img, x, y, size, a, alpha, rx, ry, sux, suy, st);
   }
 
   // 3D tumble helpers. A knock sets flip speeds from the flat spin it gave;
@@ -882,6 +1012,11 @@
   const fpsEl = document.getElementById('fps');
   let fpsFrames = 0, fpsSince = 0;
 
+  // Wind from scrolling: signed strength (+ blows down, - blows up), eased so
+  // it builds and fades smoothly, and a running phase for the flutter.
+  const wind = { target: 0, amt: 0, lastWheel: -1e9 };
+  let windAmt = 0, windAng = 0, windPhase = 0, windBlowMs = 0;
+
   function frame(now) {
     frameNow = now;
     fpsFrames++;
@@ -917,6 +1052,19 @@
       }
     }
     motion.lastT = now;
+    // While scrolling the wind builds and fades gently; the moment scrolling
+    // stops it drops away, so glyphs start settling back straight away.
+    if (now - wind.lastWheel > CONFIG.windStopMs) wind.target = 0;
+    else wind.target *= Math.exp(-CONFIG.windDecay * dt);
+    const windRate = wind.target === 0 ? CONFIG.windRecover : 6;
+    wind.amt += (wind.target - wind.amt) * Math.min(1, dt * windRate);
+    windAmt = Math.min(1, Math.abs(wind.amt));
+    windAng = wrap((wind.amt >= 0 ? Math.PI / 2 : -Math.PI / 2) - TIP_ANGLE);
+    windPhase += dt * (0.4 + windAmt);
+    // How long a real wind has been blowing, which builds up the wall eddies.
+    windBlowMs = windAmt > 0.3 ? windBlowMs + dt * 1000 : Math.max(0, windBlowMs - dt * 2000);
+    // The scroll key is lit only while scrolling, and goes dark the moment it stops.
+    document.getElementById('k-scroll').classList.toggle('fire', now - wind.lastWheel <= CONFIG.windStopMs);
     const moving = pointer.active && now - motion.moveAt < CONFIG.stopMs;
     const v = moving ? motion.eventSpeed : 0;
     motion.speed += (v - motion.speed) * Math.min(1, dt * 12);
@@ -1036,6 +1184,24 @@
       // Bounce off a screen edge with inward normal (nx, ny). The glyph is
       // treated as a disc: the edge grips its contact point, trading sliding
       // speed along the edge for spin (and spin for sliding speed).
+      // Paper against a wall: the impact mostly dies, it scrapes along the
+      // wall, and it flips and spins; pinned by the wind it keeps fluttering
+      // and piles up with the others (the glyph collisions do the piling).
+      function leafWall(i, nx, ny) {
+        const vn = lvx[i] * nx + lvy[i] * ny;
+        const tx = -ny, ty = nx;
+        const vt = lvx[i] * tx + lvy[i] * ty;
+        const impact = Math.max(0, -vn);
+        const vn2 = impact * CONFIG.leafBounce;
+        const vt2 = vt * CONFIG.leafScrape + (Math.random() - 0.5) * (20 + impact * 0.3);
+        lvx[i] = vn2 * nx + vt2 * tx;
+        lvy[i] = vn2 * ny + vt2 * ty;
+        lspin[i] += (Math.random() - 0.5) * (1 + impact / 25);
+        flipVX[i] += (Math.random() - 0.5) * (0.5 + impact * CONFIG.leafFlip);
+        flipVY[i] += (Math.random() - 0.5) * (0.5 + impact * CONFIG.leafFlip);
+        // Let the flips play out even with 3D tumble off.
+        tumbleUntil = Math.max(tumbleUntil, frameNow + 400);
+      }
       function wallBounce(i, nx, ny) {
         const vn = lvx[i] * nx + lvy[i] * ny;
         if (vn >= 0) return;
@@ -1205,12 +1371,51 @@
             // Flight: drag, bounce off the screen edges, get knocked again by
             // the arrow, then spring home after flightMs and rejoin the grid.
             const age = now - looseAt[i];
+            // Loose glyphs ride the air like paper: drag pulls each toward the
+            // wind's speed (a little different for each), with its own
+            // turbulence buffeting it sideways and spinning it.
+            if (windAmt > 0.01) {
+              // Two per-glyph random numbers, so neighbours don't move in step.
+              const hsh = ((i * 2654435761) >>> 0) / 4294967296;
+              const hs2 = ((i * 2246822519 + 3266489917) >>> 0) / 4294967296;
+              const air = CONFIG.windSpeed * windAmt;
+              const tb = Math.sin(windPhase * (3 + hsh * 4) + hs2 * 40) + 0.5 * Math.sin(windPhase * (7 + hs2 * 5) + hsh * 40);
+              const airVy = Math.sign(wind.amt) * air * (0.55 + 0.9 * hsh) + tb * air * 0.25;
+              let airVx = Math.cos(windPhase * (2 + hs2 * 3) + hsh * 60) * air * CONFIG.windTurbulence;
+              let airVyE = airVy;
+              // Wall eddies: a row of rolls along the downwind edge. At the wall
+              // the air runs along it; where neighbouring rolls meet it turns and
+              // streams back out, carrying glyphs away before the wind pushes
+              // them in again.
+              const build = Math.min(1, windBlowMs / CONFIG.eddyBuildMs);
+              if (build > 0) {
+                const down = wind.amt > 0;
+                const dWall = down ? h - ly[i] : ly[i];
+                const B = CONFIG.eddyDepth, q = dWall / B;
+                if (q < 4) {
+                  const e = Math.exp(-q);
+                  const kx = Math.PI * 2 / CONFIG.eddySize;
+                  const th = lx[i] * kx + windPhase * 0.35;
+                  const A = CONFIG.eddyStrength * build * air;
+                  airVx += A * Math.sin(th) * (1 - q) * e;
+                  const away = A * -Math.cos(th) * q * e * kx * B;
+                  airVyE += down ? -away : away;
+                }
+              }
+              const k = Math.min(1, CONFIG.windPush * dt);
+              lvx[i] += (airVx - lvx[i]) * k;
+              lvy[i] += (airVyE - lvy[i]) * k;
+              lspin[i] += tb * windAmt * 8 * dt;
+            }
             // Slammed glyphs run faster (boost), so the whole reset is quicker.
             const bst = boost[i];
             const dragK = Math.exp(-CONFIG.drag * bst * dt);
             lvx[i] *= dragK; lvy[i] *= dragK;
             if (age > CONFIG.flightMs) {
-              const ks = CONFIG.homeSpring * bst * bst, kd = CONFIG.homeDamping * bst;
+              // A strong wind loosens the pull home, so loose glyphs sail off
+              // with it and come back once it dies down.
+              const hold = 1 - 0.85 * windAmt;
+              const ks = CONFIG.homeSpring * bst * bst * hold, kd = CONFIG.homeDamping * bst * (0.4 + 0.6 * hold);
               lvx[i] += ((x - lx[i]) * ks - lvx[i] * kd) * dt;
               lvy[i] += ((y - ly[i]) * ks - lvy[i] * kd) * dt;
             }
@@ -1226,7 +1431,10 @@
             // Height: a simple throw up off the page and back down, with a
             // small bounce when it lands.
             if (lz[i] > 0 || lvz[i] > 0) {
-              lvz[i] -= CONFIG.zGravity * boost[i] * boost[i] * dt;
+              // While the wind blows it holds each glyph at whatever height it
+              // had, so it keeps its scale and blur; it falls once the wind drops.
+              if (windAmt > 0.05) lvz[i] *= Math.exp(-25 * dt);
+              else lvz[i] -= CONFIG.zGravity * boost[i] * boost[i] * dt;
               lz[i] += lvz[i] * dt;
               if (lz[i] <= 0) {
                 lz[i] = 0;
@@ -1236,11 +1444,15 @@
             lx[i] += lvx[i] * dt; ly[i] += lvy[i] * dt;
             // Screen edges bounce glyphs while they fly. On the way home they
             // pass through, since the grid's outer rows sit just off screen.
-            if (age <= CONFIG.flightMs) {
-              if (lx[i] < 0) { lx[i] = 0; wallBounce(i, 1, 0); }
-              if (lx[i] > w) { lx[i] = w; wallBounce(i, -1, 0); }
-              if (ly[i] < 0) { ly[i] = 0; wallBounce(i, 0, 1); }
-              if (ly[i] > h) { ly[i] = h; wallBounce(i, 0, -1); }
+            // While the wind blows, the edges hold everything in, and act like
+            // a wall meeting paper rather than a bouncy ball.
+            const leafy = windAmt > 0.02;
+            if (age <= CONFIG.flightMs || leafy) {
+              const hit = leafy ? leafWall : wallBounce;
+              if (lx[i] < 0) { lx[i] = 0; hit(i, 1, 0); }
+              if (lx[i] > w) { lx[i] = w; hit(i, -1, 0); }
+              if (ly[i] < 0) { ly[i] = 0; hit(i, 0, 1); }
+              if (ly[i] > h) { ly[i] = h; hit(i, 0, -1); }
             }
             const homeDist = Math.hypot(x - lx[i], y - ly[i]);
             const flySpeed = Math.hypot(lvx[i], lvy[i]);
@@ -1378,15 +1590,31 @@
           const alpha = Math.min(1,
             CONFIG.minAlpha + (CONFIG.maxAlpha - CONFIG.minAlpha) * f + z * 0.3 + (wGrow - 1) * CONFIG.waveGlow);
           if (loose[i]) lrad[i] = Math.max(2, size * 0.42);
-          const rxD = flipX[i] + wRx, ryD = flipY[i] + wRy;
+          let rxD = flipX[i] + wRx, ryD = flipY[i] + wRy, aD = ang[i];
+          let sux = 0, suy = 0, st = 1;
+          if (windAmt > 0.01 && !loose[i]) {
+            // Wind on a pinned ribbon: the local gust strength rolls across
+            // the wall, the tip swings downwind, and it flutters and curls,
+            // each glyph a little out of step with its neighbours.
+            const gk = Math.PI * 2 / CONFIG.windGustSize;
+            const gust = windAmt * (0.55 + 0.45 * Math.sin(x * gk * 0.7 + y * gk + windPhase * 1.3));
+            const ph = windPhase * CONFIG.windFlutterHz * Math.PI * 2 + x * 0.21 + y * 0.37 + (i % 7);
+            const flutter = Math.sin(ph) * CONFIG.windFlutter * gust;
+            // Ribbons swing all the way downwind even in a moderate breeze.
+            const swing = Math.min(1, gust * CONFIG.windTurn * 2.5);
+            aD = wrap(aD + wrap(windAng - aD) * swing * swing * (3 - 2 * swing) + flutter);
+            rxD += Math.sin(ph * 1.7 + 1.3) * CONFIG.windCurl * gust;
+            sux = 0; suy = 1;
+            st = 1 + CONFIG.windStretch * gust * (0.8 + 0.2 * Math.cos(ph));
+          }
           // Anything thrown, or grown past blurStart by plowing, is drawn
           // after the grid so bokeh applies and nearer glyphs sit on top.
           if (z > 0 || grow > CONFIG.blurStart) {
-            thrown.push({ gx, gy, size, alpha, a: ang[i], z, grow, rx: rxD, ry: ryD,
-              vx: loose[i] ? lvx[i] : 0, vy: loose[i] ? lvy[i] : 0 });
+            thrown.push({ gx, gy, size, alpha, a: aD, z, grow, rx: rxD, ry: ryD,
+              vx: loose[i] ? lvx[i] : 0, vy: loose[i] ? lvy[i] : 0, sux, suy, st });
           } else {
-            if (loose[i]) drawMoving(sprite, gx, gy, size, ang[i], alpha, rxD, ryD, lvx[i], lvy[i]);
-            else drawGlyph(sprite, gx, gy, size, ang[i], alpha, rxD, ryD);
+            if (loose[i]) drawMoving(sprite, gx, gy, size, aD, alpha, rxD, ryD, lvx[i], lvy[i]);
+            else drawGlyph(sprite, gx, gy, size, aD, alpha, rxD, ryD, sux, suy, st);
           }
         }
       }
@@ -1396,14 +1624,14 @@
         const b = Math.max(0, Math.min(1,
           (t.grow - CONFIG.blurStart) / (CONFIG.blurFull - CONFIG.blurStart)));
         if (b === 0 || !blurSprites.length) {
-          drawMoving(sprite, t.gx, t.gy, t.size, t.a, t.alpha, t.rx, t.ry, t.vx, t.vy);
+          drawMoving(sprite, t.gx, t.gy, t.size, t.a, t.alpha, t.rx, t.ry, t.vx, t.vy, t.sux, t.suy, t.st);
         } else {
           // Cross-fade the two nearest blur levels for a gradual blur, and
           // let out-of-focus glyphs read a little softer.
           const lv = b * BLUR_LEVELS, l0 = Math.floor(lv), l1 = Math.min(BLUR_LEVELS, l0 + 1);
           const frac = lv - l0, alpha = t.alpha * (1 - 0.3 * b);
-          drawMoving(blurSprites[l0], t.gx, t.gy, t.size, t.a, alpha * (1 - frac), t.rx, t.ry, t.vx, t.vy);
-          if (frac > 0) drawMoving(blurSprites[l1], t.gx, t.gy, t.size, t.a, alpha * frac, t.rx, t.ry, t.vx, t.vy);
+          drawMoving(blurSprites[l0], t.gx, t.gy, t.size, t.a, alpha * (1 - frac), t.rx, t.ry, t.vx, t.vy, t.sux, t.suy, t.st);
+          if (frac > 0) drawMoving(blurSprites[l1], t.gx, t.gy, t.size, t.a, alpha * frac, t.rx, t.ry, t.vx, t.vy, t.sux, t.suy, t.st);
         }
       }
       ctx.globalAlpha = 1;
@@ -1658,6 +1886,13 @@
     pointer.active = false;
     document.getElementById('k-shift').classList.remove('fire');
   });
+  // Scrolling blows wind against the scroll: up the page when scrolling down,
+  // like air rushing past as the page moves.
+  window.addEventListener('wheel', e => {
+    const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    wind.target = Math.max(-1.2, Math.min(1.2, wind.target - d * CONFIG.windGain));
+    wind.lastWheel = performance.now();
+  }, { passive: true });
   window.addEventListener('keyup', e => {
     if (e.key === 'Shift') document.getElementById('k-shift').classList.remove('fire');
   });
@@ -1792,8 +2027,9 @@
     // Secret: ` shows or hides the tuning panels (motion blur, size ramp).
     if (e.key === '`') {
       const mb = document.getElementById('mb-panel'), ramp = document.getElementById('ramp-panel');
+      const windP = document.getElementById('wind-panel');
       const show = mb.hidden;
-      mb.hidden = ramp.hidden = !show;
+      mb.hidden = ramp.hidden = windP.hidden = !show;
       return;
     }
     if (e.code === 'Space') {
