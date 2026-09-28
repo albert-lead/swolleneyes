@@ -504,6 +504,21 @@
     <output data-for="eddyBuildMs"></output>
     <input type="range" data-config="eddyBuildMs" min="0" max="3000" step="50" data-digits="0" data-suffix="ms">
   </label>
+  <label>
+    <span>All torn off after (detachFullMs)</span>
+    <output data-for="detachFullMs"></output>
+    <input type="range" data-config="detachFullMs" min="500" max="20000" step="250" data-digits="0" data-suffix="ms">
+  </label>
+  <label>
+    <span>Tear-off speed (detachSpeed)</span>
+    <output data-for="detachSpeed"></output>
+    <input type="range" data-config="detachSpeed" min="0.3" max="8" step="0.1">
+  </label>
+  <label>
+    <span>Big glyphs first (detachSizeBias)</span>
+    <output data-for="detachSizeBias"></output>
+    <input type="range" data-config="detachSizeBias" min="0" max="20" step="0.5">
+  </label>
 </div>
 <!-- Tuning panels on the right stack in a column that scrolls if needed. -->
 <div class="dev-col">
@@ -701,6 +716,11 @@
     eddySize: 670,     // width of each roll along the wall, px
     eddyDepth: 90,     // how far the rolls reach out from the wall, px
     eddyBuildMs: 700,  // how long the wind must blow for the rolls to fully form
+    // Tear-off: keep scrolling and pinned glyphs start tearing loose at
+    // random, the bigger ones much sooner, until every glyph is off the wall.
+    detachFullMs: 6000, // scrolling time after which every glyph has torn loose
+    detachSpeed: 2.5,  // how early they start going (higher = more tear off early)
+    detachSizeBias: 5, // how much sooner big glyphs tear off (5 = up to 6x sooner)
     // Edges in the wind act like a wall meeting paper or leaves: almost no
     // bounce, a scrape along the wall, and a flip and tumble on impact.
     leafBounce: 0.12,  // speed kept bouncing off the wall
@@ -1557,6 +1577,28 @@
                   lz[i] = lvz[i] = 0;
                   kickFlip(i, 4);
                 }
+              }
+            }
+            // Tear-off: each glyph has its own random point in the scroll
+            // (sooner for bigger glyphs); once the wind has blown that long it
+            // tears loose, keeping its size, and joins the loose glyphs.
+            if (!loose[i] && windAmt > 0.3 && windBlowMs > 0 && looseCount < CONFIG.maxLoose) {
+              const hsh = ((i * 2654435761) >>> 0) / 4294967296;
+              const at = CONFIG.detachFullMs * Math.pow(hsh, CONFIG.detachSpeed) /
+                (1 + CONFIG.detachSizeBias * f);
+              if (windBlowMs > at) {
+                loose[i] = 1; looseCount++;
+                lx[i] = x + offX[i]; ly[i] = y + offY[i];
+                lvx[i] = (Math.random() - 0.5) * 60;
+                lvy[i] = Math.sign(wind.amt) * 80 * (0.5 + Math.random());
+                lz[i] = lvz[i] = 0;
+                lspin[i] = (Math.random() - 0.5) * 6;
+                flipVX[i] = (Math.random() - 0.5) * 6;
+                flipVY[i] = (Math.random() - 0.5) * 6;
+                linger[i] = Math.max(linger[i], f);
+                boost[i] = 1;
+                looseAt[i] = now - CONFIG.flightMs;
+                tumbleUntil = Math.max(tumbleUntil, now + 600);
               }
             }
             gx = x + offX[i]; gy = y + offY[i];
