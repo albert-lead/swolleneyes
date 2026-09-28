@@ -324,6 +324,7 @@
   <div class="action"><kbd id="k-shift"><span class="k-label">shift</span></kbd><span class="plus">+</span><kbd id="k-click"><span class="k-label">click</span></kbd><span>Stamp</span></div>
   <div class="action"><kbd id="k-space"><span class="k-label">space</span></kbd><span>Rage</span></div>
   <div class="action"><kbd id="k-scroll"><span class="k-label">scroll</span></kbd><span>Wind</span></div>
+  <div class="action"><kbd id="k-esc"><span class="k-label">esc</span></kbd><span>Reset</span></div>
 </div>
 <div class="side">
 <div class="tuning" id="tuning" aria-label="Variables">
@@ -718,7 +719,7 @@
     eddyBuildMs: 700,  // how long the wind must blow for the rolls to fully form
     // Tear-off: keep scrolling and pinned glyphs start tearing loose at
     // random, the bigger ones much sooner, until every glyph is off the wall.
-    detachFullMs: 6000, // scrolling time after which every glyph has torn loose
+    detachFullMs: 1400, // scrolling time after which every glyph has torn loose
     detachSpeed: 2.5,  // how early they start going (higher = more tear off early)
     detachSizeBias: 5, // how much sooner big glyphs tear off (5 = up to 6x sooner)
     // Edges in the wind act like a wall meeting paper or leaves: almost no
@@ -1782,6 +1783,28 @@
   }
 
   // Let "chill" go gently: every glyph drifts straight home, no tumbling.
+  // Esc: calm everything down and send every glyph straight home, fast.
+  function resetAll(now) {
+    forms.length = 0;
+    waves.length = 0;
+    wind.target = wind.amt = 0;
+    windBlowMs = 0;
+    shakeAt = -1e9;
+    tumbleUntil = 0;
+    for (let i = 0; i < loose.length; i++) {
+      if (!loose[i]) continue;
+      formRef[i] = null;
+      formScale[i] = 1;
+      loose[i] = 1;
+      lvx[i] = lvy[i] = 0;
+      lvz[i] = Math.min(lvz[i], 0);
+      lspin[i] = flipVX[i] = flipVY[i] = 0;
+      linger[i] = 0;
+      boost[i] = 2.5;
+      looseAt[i] = now - CONFIG.flightMs;
+    }
+  }
+
   function releaseForm(fm, now) {
     const k0 = forms.indexOf(fm);
     if (k0 < 0) return;
@@ -2072,6 +2095,11 @@
       const windP = document.getElementById('wind-panel');
       const show = mb.hidden;
       mb.hidden = ramp.hidden = windP.hidden = !show;
+      return;
+    }
+    if (e.key === 'Escape') {
+      resetAll(performance.now());
+      flash('k-esc');
       return;
     }
     if (e.code === 'Space') {
