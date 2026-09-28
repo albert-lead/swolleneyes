@@ -680,25 +680,25 @@
     // Wind (scroll): scrolling whips up a breeze blowing the way you scroll.
     // Glyphs stay pinned in place, like paper ribbons stuck to a wall: they
     // swing downwind, stretch out and flutter, with gusts rolling across.
-    windGain: 0.004,   // wind added per unit of scroll
+    windGain: 0.015,   // wind added per unit of scroll
     windDecay: 1.6,    // how quickly the wind fades while you keep scrolling
     windStopMs: 90,    // no scroll for this long counts as stopped
-    windRecover: 9,    // how quickly everything settles once scrolling stops
+    windRecover: 26.5,    // how quickly everything settles once scrolling stops
     windTurn: 1,       // how far tips swing to point downwind
-    windFlutter: 0.45, // flutter swing, in radians
+    windFlutter: 0.75, // flutter swing, in radians
     windFlutterHz: 3.2, // flutter speed
-    windCurl: 1.1,     // how much ribbons curl (3D flip) as they flutter
-    windStretch: 0.7,  // how much they stretch along the wind
-    windGustSize: 420, // size of the gusts rolling across the wall, px
+    windCurl: 2.65,     // how much ribbons curl (3D flip) as they flutter
+    windStretch: 1.35,  // how much they stretch along the wind
+    windGustSize: 650, // size of the gusts rolling across the wall, px
     windSpeed: 420,    // speed of the air carrying loose glyphs, px/s
-    windPush: 3,       // how quickly loose glyphs pick up the air's speed (drag)
-    windTurbulence: 0.6, // sideways buffeting, as a share of the air speed
+    windPush: 12,       // how quickly loose glyphs pick up the air's speed (drag)
+    windTurbulence: 1, // sideways buffeting, as a share of the air speed
     // Near the downwind edge the air rolls into vortices (like wind eddying
     // off a wall). They build up the longer the wind keeps blowing, until
     // glyphs pinned at the wall get swept along it and flung back out, then
     // blown in again.
-    eddyStrength: 1.8, // strength of the rolls at full build-up (1.2+ lets glyphs escape)
-    eddySize: 260,     // width of each roll along the wall, px
+    eddyStrength: 2.95, // strength of the rolls at full build-up (1.2+ lets glyphs escape)
+    eddySize: 670,     // width of each roll along the wall, px
     eddyDepth: 90,     // how far the rolls reach out from the wall, px
     eddyBuildMs: 700,  // how long the wind must blow for the rolls to fully form
     // Edges in the wind act like a wall meeting paper or leaves: almost no
