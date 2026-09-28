@@ -117,6 +117,7 @@
   .mb-panel { position: fixed; top: 16px; right: 16px; gap: 10px; }
   /* Size ramp panel, centre right. */
   .ramp-panel { position: fixed; top: 50%; right: 16px; transform: translateY(-50%); gap: 10px; }
+  .ramp-panel[hidden] { display: none; }
   .mb-panel[hidden] { display: none; }
   .mb-title { font-weight: 600; color: var(--menu-ink); }
   .mb-title span { font-weight: 400; color: var(--menu-ink-soft); }
@@ -407,7 +408,7 @@
 </div>
 </div>
 <!-- Size ramp: how glyphs grow toward the cursor. -->
-<div class="tuning ramp-panel" aria-label="Size ramp">
+<div class="tuning ramp-panel" id="ramp-panel" aria-label="Size ramp" hidden>
   <h2 class="mb-title">Size ramp</h2>
   <label>
     <span>Largest size (maxSize)</span>
@@ -1788,10 +1789,11 @@
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     // The shift key stays lit while it's held.
     if (e.key === 'Shift') { document.getElementById('k-shift').classList.add('fire'); return; }
-    // Secret: ` shows or hides the motion blur panel.
+    // Secret: ` shows or hides the tuning panels (motion blur, size ramp).
     if (e.key === '`') {
-      const mb = document.getElementById('mb-panel');
-      mb.hidden = !mb.hidden;
+      const mb = document.getElementById('mb-panel'), ramp = document.getElementById('ramp-panel');
+      const show = mb.hidden;
+      mb.hidden = ramp.hidden = !show;
       return;
     }
     if (e.code === 'Space') {
