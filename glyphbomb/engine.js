@@ -48,10 +48,11 @@ function mount(container, opts = {}) {
       minAlpha: 0.35,
       maxAlpha: 1,
       ease: 0.12,        // cursor smoothing, 0..1 (lower is lazier)
-      // Idle: once the pointer has been away for a while, the giant glyph grows
-      // in at its resting size and wanders slowly around the grid.
+      // Idle: once the pointer has been still (or away) for a while, the giant
+      // glyph grows in at its resting size and wanders slowly around the grid.
+      // Moving the pointer brings it back.
       idleOn: false,
-      idleAfterMs: 1500, // pointer away this long counts as idle
+      idleAfterMs: 1000, // no pointer movement for this long counts as idle
       idleGrowMs: 1400,  // time for the glyph to grow in
       idleSpeed: 0.08,   // wandering speed (lower is slower)
       idleRange: 0.9,    // how far it wanders, as a share of the room that keeps it in view
@@ -365,7 +366,7 @@ function mount(container, opts = {}) {
 
     // Current shape scale, eased toward the speed-based target each frame.
     let shapeScale = 1;
-    // Idle wandering: when the pointer was last seen, whether we're idle, and
+    // Idle wandering: when the pointer last moved, whether we're idle, and
     // the grow-in (0..1) and path phase for the current idle spell.
     let lastActive = performance.now(), idling = false, idleT0 = 0, shapeGrow = 1;
     let idlePa = 0, idlePb = 0;
@@ -560,10 +561,9 @@ function mount(container, opts = {}) {
       // Rotation that points the tip along the direction of movement.
       const moveAng = wrap(Math.atan2(motion.dirY, motion.dirX) - TIP_ANGLE);
 
-      // Idle: start a new spell once the pointer has been away long enough.
+      // Idle: start a new spell once the pointer has been still long enough.
       // The glyph grows in from nothing and drifts along a slow Lissajous path.
-      if (pointer.active) lastActive = now;
-      const idleNow = CONFIG.idleOn && !pointer.active && now - lastActive > CONFIG.idleAfterMs;
+      const idleNow = CONFIG.idleOn && now - lastActive > CONFIG.idleAfterMs;
       if (idleNow && !idling) {
         idleT0 = now; shapeGrow = 0;
         idlePa = Math.random() * Math.PI * 2; idlePb = Math.random() * Math.PI * 2;
@@ -1418,6 +1418,7 @@ function mount(container, opts = {}) {
 
   const onDown = e => {
     if (e.button !== 0) return;
+    lastActive = performance.now();
     const [x, y] = local(e);
     stamp(x, y, { aim: e.shiftKey });
     emit('action', 'click');
@@ -1426,6 +1427,7 @@ function mount(container, opts = {}) {
     const [px, py] = local(e);
     hovering = true;
     const t = performance.now();
+    lastActive = t;
     if (pointer.active && motion.moveAt) {
       const et = Math.max(1, t - motion.moveAt) / 1000;
       const v = Math.hypot(px - pointer.x, py - pointer.y) / et;

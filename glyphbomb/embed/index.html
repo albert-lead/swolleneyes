@@ -196,7 +196,7 @@
   </div>
 </main>
 
-<script src="../engine.js"></script>
+<script src="../engine.js?v=4"></script>
 <script>
   // Embed: the effect inside a hero card. Shortcuts and scroll-wind only work
   // while the pointer is over the card, so the rest of the page scrolls and
@@ -206,7 +206,7 @@
     keys: window,
     keysWhen: 'hover',
     wheel: hero,
-    config: { spacing: 18 },
+    config: { spacing: 18, idleOn: true },
   });
   // The canvas sits behind the heading and the controls.
   hero.querySelector('canvas').style.zIndex = '1';
