@@ -34,9 +34,72 @@
   .meta { display: grid; grid-template-columns: 240px 1fr; gap: 24px; margin-top: 56px; }
   .meta time { font-size: 13px; color: #555; }
   .meta p { margin: 0; max-width: 720px; }
+
+  /* Download block under the body copy: a thumbnail of the document and the
+     link, sitting on a shared baseline. Placeholder content only. */
+  .download {
+    grid-column: 2;
+    display: flex;
+    align-items: flex-end;
+    gap: 64px;
+    margin-top: 72px;
+  }
+  .thumb {
+    position: relative;
+    flex: 0 0 auto;
+    width: min(500px, 100%);
+    aspect-ratio: 5 / 3;
+    border-radius: 28px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle, rgba(255, 255, 255, 0.55) 1px, transparent 1.5px) 0 0 / 14px 14px,
+      linear-gradient(135deg, #c9def6 0%, #b9cbeb 60%, #cfc6dc 100%);
+  }
+  .thumb .page, .thumb .cover {
+    position: absolute;
+    top: 12%;
+    width: 50%;
+    height: 110%;
+    border-radius: 3px;
+    box-shadow: 0 8px 24px rgba(40, 60, 110, 0.18);
+  }
+  .thumb .page { left: 32%; background: #fff; transform: rotate(-2deg); }
+  .thumb .cover {
+    left: 20%;
+    transform: rotate(-5deg);
+    background:
+      radial-gradient(circle, rgba(255, 255, 255, 0.5) 0.8px, transparent 1.2px) 0 0 / 6px 6px,
+      linear-gradient(180deg, #7188bf 0%, #8fa8d8 55%, #b7d3f5 100%);
+    padding: 18px 16px;
+    box-sizing: border-box;
+  }
+  /* Grey bars standing in for the cover title and subtitle. */
+  .thumb .cover i {
+    display: block;
+    height: 9px;
+    margin-bottom: 7px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.9);
+  }
+  .thumb .cover i:nth-child(1) { width: 60%; }
+  .thumb .cover i:nth-child(2) { width: 75%; }
+  .thumb .cover i:nth-child(3) { width: 50%; margin-bottom: 12px; }
+  .thumb .cover i:nth-child(4) { width: 55%; height: 4px; background: rgba(255, 255, 255, 0.6); }
+  .download-link {
+    font-size: 28px;
+    line-height: 1.2;
+    color: #2a2d33;
+    text-decoration: none;
+    border-bottom: 1.5px solid currentColor;
+    padding-bottom: 4px;
+    white-space: nowrap;
+  }
+  .download-link:hover { color: #000; }
   @media (max-width: 720px) {
     .article { margin: 16px; padding: 16px 16px 32px; border-radius: 24px; }
     .meta { grid-template-columns: 1fr; }
+    .download { grid-column: 1; flex-direction: column; align-items: flex-start; gap: 24px; margin-top: 40px; }
+    .download-link { font-size: 20px; }
   }
 
   /* The hero card. The effect fills it; the heading sits on top as real text. */
@@ -159,7 +222,7 @@
     z-index: 100;
   }
   body.locked { overflow: hidden; }
-  @media (max-width: 720px) { .actions { display: none; } }
+  @media (max-width: 720px) { .actions, .controls .divider { display: none; } }
 </style>
 </head>
 <body>
@@ -192,7 +255,19 @@
   <div class="meta">
     <time>Date</time>
     <p>Placeholder body copy. This page stands in for the article the hero card
-    sits in, so the embed can be seen at its real size and position.</p>
+    sits in, so the embed can be seen at its real size and position. The real
+    summary runs about six or seven lines at this width, so this paragraph is
+    padded out to roughly that length. It describes what the paper covers and
+    who it is for, and leads into the download below. Final copy will replace
+    this text before launch, along with the date, the heading in the card and
+    the document thumbnail.</p>
+    <div class="download">
+      <div class="thumb" aria-hidden="true">
+        <div class="page"></div>
+        <div class="cover"><i></i><i></i><i></i><i></i></div>
+      </div>
+      <a class="download-link" href="#">Download link text&nbsp;&darr;</a>
+    </div>
   </div>
 </main>
 
