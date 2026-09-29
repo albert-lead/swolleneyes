@@ -66,7 +66,9 @@
     z-index: 2;
   }
 
-  /* Controls, stacked on the right edge of the card. */
+  /* Controls, stacked on the right edge of the card. Every row ends in its
+     keys, so the keys line up on one right edge and the labels sit to their
+     left. */
   .controls {
     position: absolute;
     top: 50%;
@@ -75,68 +77,84 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 12px;
+    gap: 20px;
     z-index: 3;
+  }
+  .controls, .expand {
     font: 12px/1.3 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: rgba(255, 255, 255, 0.9);
     user-select: none;
   }
-  .menu {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 8px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.32);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: var(--menu-ink-soft);
-  }
-  .menu button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 6px;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
-  .menu button:hover { background: rgba(59, 75, 117, 0.1); }
-  .menu button[aria-pressed="true"] { color: var(--menu-ink); font-weight: 600; }
-  .menu kbd, .action kbd {
-    display: inline-grid;
-    place-items: center;
-    height: 18px;
-    border: 1px solid currentColor;
-    border-radius: 4px;
-    font: inherit;
-    font-size: 11px;
-  }
-  .menu kbd { width: 18px; text-transform: uppercase; }
-  .menu button[aria-pressed="true"] kbd { background: var(--menu-ink); color: #fff; border-color: var(--menu-ink); }
-  .menu .state { margin-left: auto; padding-left: 12px; }
-
-  .actions {
+  .menu, .actions {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 8px;
-    color: rgba(255, 255, 255, 0.9);
   }
   .action { display: flex; align-items: center; gap: 8px; }
+  .menu button, .expand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .menu button:hover, .expand:hover { color: #fff; }
+  .menu button[aria-pressed="true"] { color: #fff; font-weight: 600; }
   .action .plus { margin: 0 -4px; opacity: 0.7; }
-  .action kbd { padding: 0 6px; position: relative; transition: border-color 140ms ease; }
-  .action kbd .k-label { transition: opacity 140ms ease; }
-  .action kbd svg {
+  .controls kbd, .expand kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    box-sizing: border-box;
+    height: 18px;
+    padding: 0 6px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 400;
+    position: relative;
+    transition: border-color 140ms ease;
+  }
+  .controls kbd .k-label { transition: opacity 140ms ease; }
+  .controls kbd svg {
     position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px);
     opacity: 0; transition: opacity 140ms ease; pointer-events: none;
   }
-  .action kbd.fire { border-color: transparent; transition: none; }
-  .action kbd.fire .k-label { opacity: 0; transition: none; }
-  .action kbd.fire svg { opacity: 1; transition: none; }
+  /* Lit keys: a 50% white fill with the letters cut out. Actions flash; an
+     active mode stays lit. */
+  .controls kbd.fire, .controls kbd.on { border-color: transparent; transition: none; }
+  .controls kbd.fire .k-label, .controls kbd.on .k-label { opacity: 0; transition: none; }
+  .controls kbd.fire svg, .controls kbd.on svg { opacity: 1; transition: none; }
+
+  /* Full page, top right of the card. */
+  .expand {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 3;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .expand kbd { padding: 0 4px; }
+  .expand kbd svg { width: 10px; height: 10px; }
+  .expand .when-open { display: none; }
+  .hero.expanded .expand .when-open { display: inline-flex; }
+  .hero.expanded .expand .when-closed { display: none; }
+
+  .hero.expanded {
+    position: fixed;
+    inset: 0;
+    height: auto;
+    min-height: 0;
+    border-radius: 0;
+    z-index: 100;
+  }
+  body.locked { overflow: hidden; }
   @media (max-width: 720px) { .actions { display: none; } }
 </style>
 </head>
@@ -144,20 +162,25 @@
 <main class="article">
   <section class="hero" id="hero" aria-label="Hero">
     <h1 class="hero-title">Headline goes<br>right here</h1>
+    <button type="button" class="expand" aria-pressed="false">
+      <span class="when-closed">Full page</span>
+      <kbd class="when-closed" aria-hidden="true"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6 1h3v3M4 9H1V6M9 1 6 4M1 9l3-3"/></svg></kbd>
+      <span class="when-open">Exit</span>
+      <kbd class="when-open">esc</kbd>
+    </button>
     <div class="controls">
       <div class="menu" aria-label="Modes">
         <button type="button" data-mode="repulse" aria-pressed="false">
-          <kbd>z</kbd><span>Repulse</span><span class="state">off</span>
+          <span>Repulse</span><kbd><span class="k-label">z</span></kbd>
         </button>
         <button type="button" data-mode="attract" aria-pressed="false">
-          <kbd>x</kbd><span>Attract</span><span class="state">off</span>
+          <span>Attract</span><kbd><span class="k-label">x</span></kbd>
         </button>
       </div>
       <div class="actions" aria-label="Actions">
-        <div class="action"><kbd id="k-shift"><span class="k-label">shift</span></kbd><span class="plus">+</span><kbd id="k-click"><span class="k-label">click</span></kbd><span>Stamp</span></div>
-        <div class="action"><kbd id="k-space"><span class="k-label">space</span></kbd><span>Rage</span></div>
-        <div class="action"><kbd id="k-scroll"><span class="k-label">scroll</span></kbd><span>Wind</span></div>
-        <div class="action"><kbd id="k-esc"><span class="k-label">esc</span></kbd><span>Reset</span></div>
+        <div class="action"><span>Stamp</span><kbd id="k-shift"><span class="k-label">shift</span></kbd><span class="plus">+</span><kbd id="k-click"><span class="k-label">click</span></kbd></div>
+        <div class="action"><span>Rage</span><kbd id="k-space"><span class="k-label">space</span></kbd></div>
+        <div class="action"><span>Wind</span><kbd id="k-scroll"><span class="k-label">scroll</span></kbd></div>
       </div>
     </div>
   </section>
@@ -189,13 +212,13 @@
   const updateMenu = () => buttons.forEach(btn => {
     const on = gb.mode === btn.dataset.mode;
     btn.setAttribute('aria-pressed', String(on));
-    btn.querySelector('.state').textContent = on ? 'on' : 'off';
+    btn.querySelector('kbd').classList.toggle('on', on);
   });
   gb.on('change', updateMenu);
   updateMenu();
 
   // Action keys: a 50% white fill with the letters cut out, lit as actions fire.
-  document.querySelectorAll('.action kbd').forEach((kbd, n) => {
+  document.querySelectorAll('.controls kbd').forEach((kbd, n) => {
     const r = kbd.getBoundingClientRect();
     const wv = r.width + 2, hv = r.height + 2, id = 'ko' + n;
     const txt = kbd.textContent.trim();
@@ -215,9 +238,25 @@
     clearTimeout(el._t);
     el._t = setTimeout(() => el.classList.remove('fire'), 50);
   }
-  gb.on('action', a => flash({ click: 'k-click', space: 'k-space', esc: 'k-esc' }[a]));
+  gb.on('action', a => { const id = { click: 'k-click', space: 'k-space' }[a]; if (id) flash(id); });
   gb.on('shift', on => document.getElementById('k-shift').classList.toggle('fire', on));
   gb.on('scrolling', on => document.getElementById('k-scroll').classList.toggle('fire', on));
+
+  // Full page: the card grows to fill the window and Esc brings it back.
+  // Esc is caught before the engine sees it, so it closes instead of resetting.
+  const expandBtn = hero.querySelector('.expand');
+  function setExpanded(on) {
+    hero.classList.toggle('expanded', on);
+    document.body.classList.toggle('locked', on);
+    expandBtn.setAttribute('aria-pressed', String(on));
+  }
+  expandBtn.addEventListener('click', () => { setExpanded(!hero.classList.contains('expanded')); expandBtn.blur(); });
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && hero.classList.contains('expanded')) {
+      e.stopImmediatePropagation();
+      setExpanded(false);
+    }
+  }, true);
 
   // Pause while the card is scrolled out of view.
   new IntersectionObserver(([e]) => { e.isIntersecting ? gb.resume() : gb.pause(); }).observe(hero);
