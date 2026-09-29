@@ -175,7 +175,7 @@ function mount(container, opts = {}) {
       chillGapMs: 700,   // presses closer together than this count as in a row
       chillAssembleMs: 600, // time for the word to form
       chillHoldMs: 1000, // time it stays up (1.6s in all)
-      chillSize: 13,     // glyph size in the word
+      chillSize: 11,     // glyph size in the word
       // 3D tumble (A): loose glyphs also flip around their own x and y axes,
       // drawn as a flat glyph turning in 3D (seen straight on, no perspective).
       tumbleScale: 0.8,  // flip speed from a hit, relative to its flat spin
