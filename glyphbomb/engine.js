@@ -52,9 +52,9 @@ function mount(container, opts = {}) {
       // glyph grows in at its resting size and wanders slowly around the grid.
       // Moving the pointer brings it back.
       idleOn: false,
-      idleAfterMs: 1000, // no pointer movement for this long counts as idle
+      idleAfterMs: 2500, // no pointer movement for this long counts as idle
       idleGrowMs: 1400,  // time for the glyph to grow in
-      idleSpeed: 200,    // wandering speed (px/s); it travels in straight lines and
+      idleSpeed: 100,    // wandering speed (px/s); it travels in straight lines and
                          // bounces off the edges, like the DVD screensaver
       returnMs: 600,     // time for a glyph to shrink back once the shape moves off it
       // Rotation: while the cursor moves, every glyph points its top-right
