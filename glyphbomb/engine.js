@@ -34,7 +34,7 @@ function mount(container, opts = {}) {
     const CONFIG = Object.assign({
       spacing: 18,       // distance between grid cells
       minSize: 3.2,      // resting glyph size
-      maxSize: 17,       // glyph size directly under the cursor
+      maxSize: 15,       // glyph size directly under the cursor
       shapeSize: 347,    // width of the glyph-shaped influence area, at rest
       // Shape size follows cursor speed: slow movement shrinks it, fast grows it.
       slowScale: 0.3,    // shape scale while moving slowly (70% smaller)
@@ -54,7 +54,7 @@ function mount(container, opts = {}) {
       idleOn: false,
       idleAfterMs: 2500, // no pointer movement for this long counts as idle
       idleGrowMs: 1400,  // time for the glyph to grow in
-      idleSpeed: 100,    // wandering speed (px/s); it travels in straight lines and
+      idleSpeed: 64,     // wandering speed (px/s); it travels in straight lines and
                          // bounces off the edges, like the DVD screensaver
       returnMs: 600,     // time for a glyph to shrink back once the shape moves off it
       // Rotation: while the cursor moves, every glyph points its top-right
