@@ -66,14 +66,13 @@
     z-index: 2;
   }
 
-  /* Controls, on the right edge of the card. A two-column grid: keys in the
+  /* Controls, bottom right of the card, level with the heading's bottom edge. A two-column grid: keys in the
      first column, right-aligned to it, and labels in the second. The groups
      and rows use subgrid so every row shares the same columns. */
   .controls {
     position: absolute;
-    top: 50%;
+    bottom: 48px;
     right: 20px;
-    transform: translateY(-50%);
     display: grid;
     grid-template-columns: auto auto;
     row-gap: 20px;
