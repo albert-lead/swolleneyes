@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Keep this page out of search results; it is shared by link only. -->
+<meta name="robots" content="noindex, nofollow">
+<title>glyphbomb embed</title>
+<style>
+  :root {
+    --bg-top: #67779e;
+    --bg-bottom: #9bb1cc;
+    --bg-warm: #b3b0bf;
+    --menu-ink: #3b4b75;
+    --menu-ink-soft: #6d7ca6;
+    --page: #17181b;
+  }
+  html, body { margin: 0; }
+  body {
+    background: var(--page);
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #2a2d33;
+  }
+
+  /* Stand-in article page around the hero card, so the embed can be judged
+     in context. */
+  .article {
+    max-width: 1280px;
+    margin: 48px auto;
+    padding: 48px 56px 64px;
+    background: #fff;
+    border-radius: 40px;
+  }
+  .meta { display: grid; grid-template-columns: 240px 1fr; gap: 24px; margin-top: 56px; }
+  .meta time { font-size: 13px; color: #555; }
+  .meta p { margin: 0; max-width: 720px; }
+  @media (max-width: 720px) {
+    .article { margin: 16px; padding: 16px 16px 32px; border-radius: 24px; }
+    .meta { grid-template-columns: 1fr; }
+  }
+
+  /* The hero card. The effect fills it; the heading sits on top as real text. */
+  .hero {
+    position: relative;
+    height: min(62vh, 640px);
+    min-height: 360px;
+    border-radius: 32px;
+    overflow: hidden;
+    background:
+      radial-gradient(60% 50% at 0% 90%, var(--bg-warm) 0%, transparent 70%),
+      linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 75%);
+    cursor: crosshair;
+    isolation: isolate;
+  }
+  .hero-title {
+    position: absolute;
+    left: 56px;
+    bottom: 48px;
+    margin: 0;
+    max-width: 60%;
+    font-size: clamp(32px, 6vw, 72px);
+    line-height: 1.05;
+    font-weight: 400;
+    color: #fff;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Controls, stacked on the right edge of the card. */
+  .controls {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+    z-index: 3;
+    font: 12px/1.3 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    user-select: none;
+  }
+  .menu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.32);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--menu-ink-soft);
+  }
+  .menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .menu button:hover { background: rgba(59, 75, 117, 0.1); }
+  .menu button[aria-pressed="true"] { color: var(--menu-ink); font-weight: 600; }
+  .menu kbd, .action kbd {
+    display: inline-grid;
+    place-items: center;
+    height: 18px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 11px;
+  }
+  .menu kbd { width: 18px; text-transform: uppercase; }
+  .menu button[aria-pressed="true"] kbd { background: var(--menu-ink); color: #fff; border-color: var(--menu-ink); }
+  .menu .state { margin-left: auto; padding-left: 12px; }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .action { display: flex; align-items: center; gap: 8px; }
+  .action .plus { margin: 0 -4px; opacity: 0.7; }
+  .action kbd { padding: 0 6px; position: relative; transition: border-color 140ms ease; }
+  .action kbd .k-label { transition: opacity 140ms ease; }
+  .action kbd svg {
+    position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px);
+    opacity: 0; transition: opacity 140ms ease; pointer-events: none;
+  }
+  .action kbd.fire { border-color: transparent; transition: none; }
+  .action kbd.fire .k-label { opacity: 0; transition: none; }
+  .action kbd.fire svg { opacity: 1; transition: none; }
+  @media (max-width: 720px) { .actions { display: none; } }
+</style>
+</head>
+<body>
+<main class="article">
+  <section class="hero" id="hero" aria-label="Hero">
+    <h1 class="hero-title">Headline goes<br>right here</h1>
+    <div class="controls">
+      <div class="menu" aria-label="Modes">
+        <button type="button" data-mode="repulse" aria-pressed="false">
+          <kbd>z</kbd><span>Repulse</span><span class="state">off</span>
+        </button>
+        <button type="button" data-mode="attract" aria-pressed="false">
+          <kbd>x</kbd><span>Attract</span><span class="state">off</span>
+        </button>
+      </div>
+      <div class="actions" aria-label="Actions">
+        <div class="action"><kbd id="k-shift"><span class="k-label">shift</span></kbd><span class="plus">+</span><kbd id="k-click"><span class="k-label">click</span></kbd><span>Stamp</span></div>
+        <div class="action"><kbd id="k-space"><span class="k-label">space</span></kbd><span>Rage</span></div>
+        <div class="action"><kbd id="k-scroll"><span class="k-label">scroll</span></kbd><span>Wind</span></div>
+        <div class="action"><kbd id="k-esc"><span class="k-label">esc</span></kbd><span>Reset</span></div>
+      </div>
+    </div>
+  </section>
+  <div class="meta">
+    <time>Date</time>
+    <p>Placeholder body copy. This page stands in for the article the hero card
+    sits in, so the embed can be seen at its real size and position.</p>
+  </div>
+</main>
+
+<script src="../engine.js"></script>
+<script>
+  // Embed: the effect inside a hero card. Shortcuts and scroll-wind only work
+  // while the pointer is over the card, so the rest of the page scrolls and
+  // types as normal.
+  const hero = document.getElementById('hero');
+  const gb = Glyphbomb.mount(hero, {
+    keys: window,
+    keysWhen: 'hover',
+    wheel: hero,
+    config: { spacing: 18 },
+  });
+  // The canvas sits behind the heading and the controls.
+  hero.querySelector('canvas').style.zIndex = '1';
+
+  // Mode buttons.
+  const buttons = [...document.querySelectorAll('.menu [data-mode]')];
+  buttons.forEach(btn => btn.addEventListener('click', () => { gb.toggleMode(btn.dataset.mode); btn.blur(); }));
+  const updateMenu = () => buttons.forEach(btn => {
+    const on = gb.mode === btn.dataset.mode;
+    btn.setAttribute('aria-pressed', String(on));
+    btn.querySelector('.state').textContent = on ? 'on' : 'off';
+  });
+  gb.on('change', updateMenu);
+  updateMenu();
+
+  // Action keys: a 50% white fill with the letters cut out, lit as actions fire.
+  document.querySelectorAll('.action kbd').forEach((kbd, n) => {
+    const r = kbd.getBoundingClientRect();
+    const wv = r.width + 2, hv = r.height + 2, id = 'ko' + n;
+    const txt = kbd.textContent.trim();
+    const cs = getComputedStyle(kbd);
+    kbd.insertAdjacentHTML('beforeend',
+      `<svg viewBox="0 0 ${wv} ${hv}" aria-hidden="true"><defs><mask id="${id}">` +
+      `<rect width="${wv}" height="${hv}" rx="5" fill="#fff"/>` +
+      `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#000" ` +
+      `style="font-family:${cs.fontFamily.replace(/"/g, "'")};font-size:${cs.fontSize}">${txt}</text>` +
+      `</mask></defs><rect width="${wv}" height="${hv}" rx="5" fill="rgba(255,255,255,0.5)" mask="url(#${id})"/></svg>`);
+  });
+  function flash(id) {
+    const el = document.getElementById(id);
+    el.classList.remove('fire');
+    el.offsetWidth;
+    el.classList.add('fire');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('fire'), 50);
+  }
+  gb.on('action', a => flash({ click: 'k-click', space: 'k-space', esc: 'k-esc' }[a]));
+  gb.on('shift', on => document.getElementById('k-shift').classList.toggle('fire', on));
+  gb.on('scrolling', on => document.getElementById('k-scroll').classList.toggle('fire', on));
+
+  // Pause while the card is scrolled out of view.
+  new IntersectionObserver(([e]) => { e.isIntersecting ? gb.resume() : gb.pause(); }).observe(hero);
+</script>
+</body>
+</html>
