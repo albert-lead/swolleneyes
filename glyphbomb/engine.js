@@ -2,7 +2,7 @@
  * glyphbomb engine
  *
  * The effect on its own: a grid of glyphs that reacts to the pointer, with
- * Repulse, Attract, Stamp, Rage, Wind and the rest. It has no buttons or
+ * Repel, Attract, Stamp, Rage, Wind and the rest. It has no buttons or
  * panels; each page builds its own UI on top and talks to it through the API
  * returned by Glyphbomb.mount().
  *
@@ -48,6 +48,13 @@ function mount(container, opts = {}) {
       minAlpha: 0.35,
       maxAlpha: 1,
       ease: 0.12,        // cursor smoothing, 0..1 (lower is lazier)
+      // Idle: once the pointer has been away for a while, the giant glyph grows
+      // in at its resting size and wanders slowly around the grid.
+      idleOn: false,
+      idleAfterMs: 1500, // pointer away this long counts as idle
+      idleGrowMs: 1400,  // time for the glyph to grow in
+      idleSpeed: 0.08,   // wandering speed (lower is slower)
+      idleRange: 0.9,    // how far it wanders, as a share of the room that keeps it in view
       returnMs: 600,     // time for a glyph to shrink back once the shape moves off it
       // Rotation: while the cursor moves, every glyph points its top-right
       // tip in the direction of movement, then eases back when it stops.
@@ -358,9 +365,13 @@ function mount(container, opts = {}) {
 
     // Current shape scale, eased toward the speed-based target each frame.
     let shapeScale = 1;
+    // Idle wandering: when the pointer was last seen, whether we're idle, and
+    // the grow-in (0..1) and path phase for the current idle spell.
+    let lastActive = performance.now(), idling = false, idleT0 = 0, shapeGrow = 1;
+    let idlePa = 0, idlePb = 0;
     // Orient: the shape turns with movement, like the glyphs. Set from the Variables panel.
     let shapeTurns = true;
-    // Press Z (Repulse) to toggle glyphs fleeing the cursor while it moves.
+    // Press Z (Repel) to toggle glyphs fleeing the cursor while it moves.
     let avoidCursor = false;
     // Press X (Attract) to toggle the black hole pull.
     let attractCursor = false;
@@ -530,7 +541,7 @@ function mount(container, opts = {}) {
       // mouse until it goes away.
       const calm = forms.some(fm => fm.kind === 'chill');
       const drive = moving && !calm ? Math.min(1, motion.speed / CONFIG.turnSpeed) : 0;
-      // Resting size when still, slowScale..fastScale while moving. Repulse and
+      // Resting size when still, slowScale..fastScale while moving. Repel and
       // Attract keep the shape at its resting size.
       const sizeTarget = moving && !avoidCursor && !attractCursor
         ? CONFIG.slowScale + (CONFIG.fastScale - CONFIG.slowScale) *
@@ -549,13 +560,34 @@ function mount(container, opts = {}) {
       // Rotation that points the tip along the direction of movement.
       const moveAng = wrap(Math.atan2(motion.dirY, motion.dirX) - TIP_ANGLE);
 
+      // Idle: start a new spell once the pointer has been away long enough.
+      // The glyph grows in from nothing and drifts along a slow Lissajous path.
+      if (pointer.active) lastActive = now;
+      const idleNow = CONFIG.idleOn && !pointer.active && now - lastActive > CONFIG.idleAfterMs;
+      if (idleNow && !idling) {
+        idleT0 = now; shapeGrow = 0;
+        idlePa = Math.random() * Math.PI * 2; idlePb = Math.random() * Math.PI * 2;
+      }
+      idling = idleNow;
+      if (idling) shapeGrow = Math.min(1, shapeGrow + dt * 1000 / CONFIG.idleGrowMs);
+      else shapeGrow += (1 - shapeGrow) * Math.min(1, dt * 6);
+      const growK = 1 - Math.pow(1 - shapeGrow, 3);
+
       const k = CONFIG.ease;
-      if (pointer.active) {
+      if (idling) {
+        const it = (now - idleT0) / 1000 * CONFIG.idleSpeed;
+        // The path is for the glyph's centre; shift by the anchor so the whole
+        // glyph stays in view.
+        const S = CONFIG.shapeSize * shapeScale;
+        const rx = Math.max(0, w - S) / 2 * CONFIG.idleRange, ry = Math.max(0, h - S) / 2 * CONFIG.idleRange;
+        eased.x = w / 2 + rx * Math.sin(it * 1.0 + idlePa) + (CONFIG.anchor[0] - 0.5) * S;
+        eased.y = h / 2 + ry * Math.sin(it * 1.37 + idlePb) + (CONFIG.anchor[1] - 0.5) * S;
+      } else if (pointer.active) {
         if (eased.x < -1000) { eased.x = pointer.x; eased.y = pointer.y; }
         eased.x += (pointer.x - eased.x) * k;
         eased.y += (pointer.y - eased.y) * k;
       }
-      eased.strength += ((pointer.active && !calm ? 1 : 0) - eased.strength) * k;
+      eased.strength += (((pointer.active || idling) && !calm ? 1 : 0) - eased.strength) * k;
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (CONFIG.mbOn && CONFIG.mbTrails > 0) {
@@ -573,7 +605,7 @@ function mount(container, opts = {}) {
         const offsetY = (h - (rows - 1) * CONFIG.spacing) / 2;
 
         // Glyph outline in screen space, with CONFIG.anchor under the cursor.
-        const scale = CONFIG.shapeSize * shapeScale / 45;
+        const scale = CONFIG.shapeSize * shapeScale * growK / 45;
         const ax = CONFIG.anchor[0] * 45, ay = CONFIG.anchor[1] * 45;
         const sc = Math.cos(shapeAng), ss = Math.sin(shapeAng);
         const poly = GLYPH_POLY.map(([px, py]) => {
@@ -1371,7 +1403,7 @@ function mount(container, opts = {}) {
     }
   }
 
-  // Modes. Repulse and Attract can't run together; turning one on from
+  // Modes. Repel and Attract can't run together; turning one on from
   // neither turns 3D tumble on, and with neither on it turns off.
   function setMode(m) {
     const was = avoidCursor || attractCursor;

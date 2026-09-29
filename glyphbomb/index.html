@@ -95,7 +95,7 @@
     line-height: 1;
   }
   .tuning-head:hover .chev { background: rgba(59, 75, 117, 0.1); }
-  /* With neither Repulse nor Attract on, the panel is closed and its title
+  /* With neither Repel nor Attract on, the panel is closed and its title
      faded and inert. */
   .tuning-head:disabled { opacity: 0.45; cursor: default; }
   .tuning-head:disabled:hover .chev { background: transparent; }
@@ -311,7 +311,7 @@
 <div class="fps" id="fps" aria-hidden="true">-- fps</div>
 <div class="menu" aria-label="Shortcuts">
   <button type="button" data-key="z" aria-pressed="false">
-    <kbd>z</kbd><span>Repulse</span><span class="state">off</span>
+    <kbd>z</kbd><span>Repel</span><span class="state">off</span>
   </button>
   <button type="button" data-key="x" aria-pressed="false">
     <kbd>x</kbd><span>Attract</span><span class="state">off</span>
@@ -336,7 +336,7 @@
       <span>3D tumble (tumble3d)</span>
       <input type="checkbox" id="tumble" role="switch">
     </label>
-    <div class="tuning-group" data-mode="z" aria-label="Repulse variables">
+    <div class="tuning-group" data-mode="z" aria-label="Repel variables">
       <label>
         <span>Blur start (blurStart)</span>
         <output data-for="blurStart"></output>
@@ -598,6 +598,7 @@
   // Playground: the full-window version with every control. The effect lives
   // in engine.js; this page only builds the UI around it.
   const gb = Glyphbomb.mount(document.getElementById('stage'), {
+    config: { idleOn: true },
     keys: window,
     wheel: window,
     shakeEls: [document.querySelector('.menu'), document.querySelector('.side')],
@@ -641,7 +642,7 @@
     panels.forEach(p => { p.hidden = !show; });
   });
 
-  // Mode menu (Z Repulse, X Attract).
+  // Mode menu (Z Repel, X Attract).
   const modeKey = { repulse: 'z', attract: 'x' };
   document.querySelectorAll('.menu [data-key]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -651,7 +652,7 @@
   });
 
   // Variables panel: shows the active mode's sliders. It starts closed and
-  // only opens from its title. The chosen open state carries across Repulse
+  // only opens from its title. The chosen open state carries across Repel
   // and Attract; with neither on it closes, its title faded and inert, and
   // reopens as it was when one comes back on.
   let userOpen = false;
