@@ -66,18 +66,17 @@
     z-index: 2;
   }
 
-  /* Controls, stacked on the right edge of the card. Every row ends in its
-     keys, so the keys line up on one right edge and the labels sit to their
-     left. */
+  /* Controls, on the right edge of the card. A two-column grid: keys in the
+     first column, right-aligned to it, and labels in the second. The groups
+     and rows use subgrid so every row shares the same columns. */
   .controls {
     position: absolute;
     top: 50%;
     right: 20px;
     transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: auto auto;
+    row-gap: 20px;
     z-index: 3;
   }
   .controls, .expand {
@@ -85,24 +84,25 @@
     color: rgba(255, 255, 255, 0.9);
     user-select: none;
   }
-  .menu, .actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-  }
-  .action { display: flex; align-items: center; gap: 8px; }
-  .menu button, .expand {
-    display: flex;
+  .menu, .actions, .menu button, .action {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
     align-items: center;
-    gap: 8px;
+    column-gap: 8px;
+  }
+  .menu, .actions { row-gap: 8px; }
+  .controls .keys { justify-self: end; display: flex; align-items: center; gap: 8px; }
+  .menu button, .expand {
     padding: 0;
     border: 0;
     background: transparent;
     color: inherit;
     font: inherit;
+    text-align: left;
     cursor: pointer;
   }
+  .expand { display: flex; align-items: center; gap: 8px; }
   .menu button:hover, .expand:hover { color: #fff; }
   .menu button[aria-pressed="true"] { color: #fff; font-weight: 600; }
   .action .plus { margin: 0 -4px; opacity: 0.7; }
@@ -126,7 +126,7 @@
     position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px);
     opacity: 0; transition: opacity 140ms ease; pointer-events: none;
   }
-  /* Lit keys: a 50% white fill with the letters cut out. Actions flash; an
+  /* Lit keys: a white fill with the letters cut out. Actions flash; an
      active mode stays lit. */
   .controls kbd.fire, .controls kbd.on { border-color: transparent; transition: none; }
   .controls kbd.fire .k-label, .controls kbd.on .k-label { opacity: 0; transition: none; }
@@ -171,16 +171,16 @@
     <div class="controls">
       <div class="menu" aria-label="Modes">
         <button type="button" data-mode="repulse" aria-pressed="false">
-          <span>Repulse</span><kbd><span class="k-label">z</span></kbd>
+          <span class="keys"><kbd><span class="k-label">z</span></kbd></span><span>Repulse</span>
         </button>
         <button type="button" data-mode="attract" aria-pressed="false">
-          <span>Attract</span><kbd><span class="k-label">x</span></kbd>
+          <span class="keys"><kbd><span class="k-label">x</span></kbd></span><span>Attract</span>
         </button>
       </div>
       <div class="actions" aria-label="Actions">
-        <div class="action"><span>Stamp</span><kbd id="k-shift"><span class="k-label">shift</span></kbd><span class="plus">+</span><kbd id="k-click"><span class="k-label">click</span></kbd></div>
-        <div class="action"><span>Rage</span><kbd id="k-space"><span class="k-label">space</span></kbd></div>
-        <div class="action"><span>Wind</span><kbd id="k-scroll"><span class="k-label">scroll</span></kbd></div>
+        <div class="action"><span class="keys"><kbd id="k-shift"><span class="k-label">shift</span></kbd><span class="plus">+</span><kbd id="k-click"><span class="k-label">click</span></kbd></span><span>Stamp</span></div>
+        <div class="action"><span class="keys"><kbd id="k-space"><span class="k-label">space</span></kbd></span><span>Rage</span></div>
+        <div class="action"><span class="keys"><kbd id="k-scroll"><span class="k-label">scroll</span></kbd></span><span>Wind</span></div>
       </div>
     </div>
   </section>
@@ -217,7 +217,7 @@
   gb.on('change', updateMenu);
   updateMenu();
 
-  // Action keys: a 50% white fill with the letters cut out, lit as actions fire.
+  // Action keys: a white fill with the letters cut out, lit as actions fire.
   document.querySelectorAll('.controls kbd').forEach((kbd, n) => {
     const r = kbd.getBoundingClientRect();
     const wv = r.width + 2, hv = r.height + 2, id = 'ko' + n;
@@ -228,7 +228,7 @@
       `<rect width="${wv}" height="${hv}" rx="5" fill="#fff"/>` +
       `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#000" ` +
       `style="font-family:${cs.fontFamily.replace(/"/g, "'")};font-size:${cs.fontSize}">${txt}</text>` +
-      `</mask></defs><rect width="${wv}" height="${hv}" rx="5" fill="rgba(255,255,255,0.5)" mask="url(#${id})"/></svg>`);
+      `</mask></defs><rect width="${wv}" height="${hv}" rx="5" fill="#fff" mask="url(#${id})"/></svg>`);
   });
   function flash(id) {
     const el = document.getElementById(id);
