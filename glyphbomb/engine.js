@@ -34,7 +34,7 @@ function mount(container, opts = {}) {
     const CONFIG = Object.assign({
       spacing: 18,       // distance between grid cells
       minSize: 3.2,      // resting glyph size
-      maxSize: 13,       // glyph size directly under the cursor
+      maxSize: 17,       // glyph size directly under the cursor
       shapeSize: 347,    // width of the glyph-shaped influence area, at rest
       // Shape size follows cursor speed: slow movement shrinks it, fast grows it.
       slowScale: 0.3,    // shape scale while moving slowly (70% smaller)
@@ -569,20 +569,36 @@ function mount(container, opts = {}) {
       const idleMinX = Math.min(w / 2, idleS / 2), idleMaxX = Math.max(w / 2, w - idleS / 2);
       const idleMinY = Math.min(h / 2, idleS / 2), idleMaxY = Math.max(h / 2, h - idleS / 2);
       if (idleNow && !idling) {
-        idleT0 = now; shapeGrow = 0;
-        idleX = idleMinX + Math.random() * (idleMaxX - idleMinX);
-        idleY = idleMinY + Math.random() * (idleMaxY - idleMinY);
-        const a = Math.PI / 4 + Math.floor(Math.random() * 4) * Math.PI / 2 + (Math.random() - 0.5) * 0.3;
+        idleT0 = now;
+        if (eased.x > -1000) {
+          // Carry on from where the glyph is: the cursor's resting spot, or where
+          // the pointer left. It only grows in again if it had faded out.
+          const fromX = pointer.active ? eased.x : pointer.x, fromY = pointer.active ? eased.y : pointer.y;
+          idleX = fromX - (CONFIG.anchor[0] - 0.5) * idleS;
+          idleY = fromY - (CONFIG.anchor[1] - 0.5) * idleS;
+          if (!pointer.active) shapeGrow = 0;
+        } else {
+          // No pointer yet: start somewhere at random.
+          idleX = idleMinX + Math.random() * (idleMaxX - idleMinX);
+          idleY = idleMinY + Math.random() * (idleMaxY - idleMinY);
+          shapeGrow = 0;
+        }
+        // Head off along the nearest diagonal to the last movement, with a little
+        // wobble so it doesn't retrace the same path.
+        const last = Math.hypot(motion.dirX, motion.dirY) > 0.01 ? Math.atan2(motion.dirY, motion.dirX) : Math.random() * Math.PI * 2;
+        const a = Math.PI / 4 + Math.round((last - Math.PI / 4) / (Math.PI / 2)) * Math.PI / 2 + (Math.random() - 0.5) * 0.3;
         idleVx = Math.cos(a); idleVy = Math.sin(a);
       }
       idling = idleNow;
       if (idling) {
         idleX += idleVx * CONFIG.idleSpeed * dt;
         idleY += idleVy * CONFIG.idleSpeed * dt;
-        if (idleX < idleMinX) { idleX = idleMinX; idleVx = Math.abs(idleVx); }
-        if (idleX > idleMaxX) { idleX = idleMaxX; idleVx = -Math.abs(idleVx); }
-        if (idleY < idleMinY) { idleY = idleMinY; idleVy = Math.abs(idleVy); }
-        if (idleY > idleMaxY) { idleY = idleMaxY; idleVy = -Math.abs(idleVy); }
+        // Bounce off the edges. It may start part way past one (near where the
+        // pointer left), so turn it back in rather than snapping it inside.
+        if (idleX < idleMinX) idleVx = Math.abs(idleVx);
+        if (idleX > idleMaxX) idleVx = -Math.abs(idleVx);
+        if (idleY < idleMinY) idleVy = Math.abs(idleVy);
+        if (idleY > idleMaxY) idleVy = -Math.abs(idleVy);
       }
       if (idling) shapeGrow = Math.min(1, shapeGrow + dt * 1000 / CONFIG.idleGrowMs);
       else shapeGrow += (1 - shapeGrow) * Math.min(1, dt * 6);
