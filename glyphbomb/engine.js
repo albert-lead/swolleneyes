@@ -54,8 +54,8 @@ function mount(container, opts = {}) {
       idleOn: false,
       idleAfterMs: 1000, // no pointer movement for this long counts as idle
       idleGrowMs: 1400,  // time for the glyph to grow in
-      idleSpeed: 0.08,   // wandering speed (lower is slower)
-      idleRange: 0.9,    // how far it wanders, as a share of the room that keeps it in view
+      idleSpeed: 200,    // wandering speed (px/s); it travels in straight lines and
+                         // bounces off the edges, like the DVD screensaver
       returnMs: 600,     // time for a glyph to shrink back once the shape moves off it
       // Rotation: while the cursor moves, every glyph points its top-right
       // tip in the direction of movement, then eases back when it stops.
@@ -367,9 +367,9 @@ function mount(container, opts = {}) {
     // Current shape scale, eased toward the speed-based target each frame.
     let shapeScale = 1;
     // Idle wandering: when the pointer last moved, whether we're idle, and
-    // the grow-in (0..1) and path phase for the current idle spell.
+    // the grow-in (0..1), and the position and direction of the current spell.
     let lastActive = performance.now(), idling = false, idleT0 = 0, shapeGrow = 1;
-    let idlePa = 0, idlePb = 0;
+    let idleX = 0, idleY = 0, idleVx = 0, idleVy = 0;
     // Orient: the shape turns with movement, like the glyphs. Set from the Variables panel.
     let shapeTurns = true;
     // Press Z (Repel) to toggle glyphs fleeing the cursor while it moves.
@@ -562,26 +562,38 @@ function mount(container, opts = {}) {
       const moveAng = wrap(Math.atan2(motion.dirY, motion.dirX) - TIP_ANGLE);
 
       // Idle: start a new spell once the pointer has been still long enough.
-      // The glyph grows in from nothing and drifts along a slow Lissajous path.
+      // The glyph grows in from nothing and drifts along a straight line, bouncing off the edges.
       const idleNow = CONFIG.idleOn && now - lastActive > CONFIG.idleAfterMs;
+      // Glyph size and the room its centre can travel in, inside the edges.
+      const idleS = CONFIG.shapeSize * shapeScale;
+      const idleMinX = Math.min(w / 2, idleS / 2), idleMaxX = Math.max(w / 2, w - idleS / 2);
+      const idleMinY = Math.min(h / 2, idleS / 2), idleMaxY = Math.max(h / 2, h - idleS / 2);
       if (idleNow && !idling) {
         idleT0 = now; shapeGrow = 0;
-        idlePa = Math.random() * Math.PI * 2; idlePb = Math.random() * Math.PI * 2;
+        idleX = idleMinX + Math.random() * (idleMaxX - idleMinX);
+        idleY = idleMinY + Math.random() * (idleMaxY - idleMinY);
+        const a = Math.PI / 4 + Math.floor(Math.random() * 4) * Math.PI / 2 + (Math.random() - 0.5) * 0.3;
+        idleVx = Math.cos(a); idleVy = Math.sin(a);
       }
       idling = idleNow;
+      if (idling) {
+        idleX += idleVx * CONFIG.idleSpeed * dt;
+        idleY += idleVy * CONFIG.idleSpeed * dt;
+        if (idleX < idleMinX) { idleX = idleMinX; idleVx = Math.abs(idleVx); }
+        if (idleX > idleMaxX) { idleX = idleMaxX; idleVx = -Math.abs(idleVx); }
+        if (idleY < idleMinY) { idleY = idleMinY; idleVy = Math.abs(idleVy); }
+        if (idleY > idleMaxY) { idleY = idleMaxY; idleVy = -Math.abs(idleVy); }
+      }
       if (idling) shapeGrow = Math.min(1, shapeGrow + dt * 1000 / CONFIG.idleGrowMs);
       else shapeGrow += (1 - shapeGrow) * Math.min(1, dt * 6);
       const growK = 1 - Math.pow(1 - shapeGrow, 3);
 
       const k = CONFIG.ease;
       if (idling) {
-        const it = (now - idleT0) / 1000 * CONFIG.idleSpeed;
-        // The path is for the glyph's centre; shift by the anchor so the whole
-        // glyph stays in view.
-        const S = CONFIG.shapeSize * shapeScale;
-        const rx = Math.max(0, w - S) / 2 * CONFIG.idleRange, ry = Math.max(0, h - S) / 2 * CONFIG.idleRange;
-        eased.x = w / 2 + rx * Math.sin(it * 1.0 + idlePa) + (CONFIG.anchor[0] - 0.5) * S;
-        eased.y = h / 2 + ry * Math.sin(it * 1.37 + idlePb) + (CONFIG.anchor[1] - 0.5) * S;
+        // The path is for the glyph's centre; shift by the anchor to get the
+        // point that sits under the cursor.
+        eased.x = idleX + (CONFIG.anchor[0] - 0.5) * idleS;
+        eased.y = idleY + (CONFIG.anchor[1] - 0.5) * idleS;
       } else if (pointer.active) {
         if (eased.x < -1000) { eased.x = pointer.x; eased.y = pointer.y; }
         eased.x += (pointer.x - eased.x) * k;
