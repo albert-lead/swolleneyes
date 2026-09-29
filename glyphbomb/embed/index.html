@@ -66,16 +66,17 @@
     z-index: 2;
   }
 
-  /* Controls, bottom right of the card, level with the heading's bottom edge. A two-column grid: keys in the
+  /* Controls, bottom right of the card, as far from the bottom as the full
+     page button is from the top. A two-column grid: keys in the
      first column, right-aligned to it, and labels in the second. The groups
      and rows use subgrid so every row shares the same columns. */
   .controls {
     position: absolute;
-    bottom: 48px;
+    bottom: 20px;
     right: 20px;
     display: grid;
     grid-template-columns: auto auto;
-    row-gap: 20px;
+    row-gap: 12px;
     z-index: 3;
   }
   .controls, .expand {
@@ -91,6 +92,10 @@
     column-gap: 8px;
   }
   .menu, .actions { row-gap: 8px; }
+  .controls .divider {
+    grid-column: 1 / -1;
+    border-top: 1px dotted rgba(255, 255, 255, 0.6);
+  }
   .controls .keys { justify-self: end; display: flex; align-items: center; gap: 8px; }
   .menu button, .expand {
     padding: 0;
@@ -176,6 +181,7 @@
           <span class="keys"><kbd><span class="k-label">x</span></kbd></span><span>Attract</span>
         </button>
       </div>
+      <div class="divider" aria-hidden="true"></div>
       <div class="actions" aria-label="Actions">
         <div class="action"><span class="keys"><kbd id="k-shift"><span class="k-label">shift</span></kbd><span class="plus">+</span><kbd id="k-click"><span class="k-label">click</span></kbd></span><span>Stamp</span></div>
         <div class="action"><span class="keys"><kbd id="k-space"><span class="k-label">space</span></kbd></span><span>Rage</span></div>
