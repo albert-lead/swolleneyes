@@ -278,7 +278,15 @@ const SCHEMA = {
     { k: 'extrudeAngle', t: 'range', label: 'Extrude Angle', min: 0, max: 360, step: 1, def: 135, fmt: (v) => v + '°', when: (p) => p.extrude > 0 },
     { k: 'fog', t: 'range', label: 'Depth Fog', min: 0, max: 100, step: 1, def: 49, fmt: (v) => v + '%' },
     { t: 'hint', text: 'Tilt lays the texture on a receding floor. Wave Height lifts it into ripples (visible with tilt, or as pulsing size without). Extrude stacks shaded copies behind each shape. Fog fades the far side.' },
-    { group: 'Motion' }, ...ANIM,
+    { group: 'Motion' },
+    { k: 'anim', t: 'check', label: 'Animate', def: false },
+    { k: 'anim3d', t: 'check', label: 'Animate 3D (traveling waves, gentle tilt sway)', def: true, when: (p) => p.anim },
+    { k: 'animRot', t: 'check', label: 'Animate rotation (slow spin)', def: false, when: (p) => p.anim },
+    { k: 'animDrift', t: 'check', label: 'Animate drift (pattern flows through the ramps)', def: false, when: (p) => p.anim },
+    { k: 'animSize', t: 'check', label: 'Animate size (soft ripple)', def: false, when: (p) => p.anim },
+    { k: 'animSwirl', t: 'check', label: 'Animate swirl (twist sways back and forth)', def: false, when: (p) => p.anim },
+    { k: 'speed', t: 'range', label: 'Speed', min: 0.01, max: 1, step: 0.01, def: 0.2, when: (p) => p.anim },
+    { t: 'hint', text: 'All motion is slow and continuous: no flashing, blinking or sudden jumps. Animation stays off for visitors whose system asks for reduced motion.', when: (p) => p.anim },
     { k: 'seed', t: 'seed', label: 'Seed', def: 7, when: (p) => p.order === 'random' },
   ],
   iso: [
@@ -666,18 +674,24 @@ function drawTexture(pt, p, C, time) {
   const slots = [0, 1, 2].filter((i) => p.use[i] && state.slots[i]);
   if (!slots.length) return 'Turn on at least one filled slot';
   const gl = slots.map((i) => G(i, p.thickness, p.mode));
-  const s = p.spacing, th = p.tilt * D2R, D = 1500, cosT = Math.cos(th), sinT = Math.sin(th);
+  const A = p.anim ? p : {}; // animation toggles only count while Animate is on
+  const tiltNow = p.tilt + (A.anim3d && p.tilt > 0 ? 5 * Math.sin(time * TAU * 0.25) : 0);
+  const twistNow = p.twist + (A.animSwirl ? 45 * Math.sin(time * TAU * 0.2) : 0);
+  const rotNow = p.rot + (A.animRot ? time * 60 : 0);
+  const drift = A.animDrift ? time * 1.5 : 0, fi = Math.floor(drift), fx = drift - fi, fj = Math.floor(drift * 0.5), fy = drift * 0.5 - fj;
+  const s = p.spacing, th = tiltNow * D2R, D = 1500, cosT = Math.cos(th), sinT = Math.sin(th);
   const extra = 1.25 + 3 * sinT + Math.max(0, -p.bulge / 100) * 0.8 + (p.twist ? 0.45 : 0) + Math.abs(p.scaleRamp / 100) * 0.6;
   const n = Math.min(70, Math.ceil(500 * extra / s) + 2);
   const k = p.scaleRamp / 100 * 2.5, ek = Math.exp(k) - 1;
   const warp = (t) => Math.abs(k) < 1e-3 ? [t, 1] : [(Math.exp(k * t) - 1) / ek, k * Math.exp(k * t) / ek];
   const dir = p.rampDir;
   const axisT = (x, y) => dir === 'horizontal' ? (x + 500) / 1000 : dir === 'vertical' ? (y + 500) / 1000 : dir === 'diagonal' ? ((x + y) / 2 + 500) / 1000 : Math.hypot(x, y) / 707;
-  const phase = time * TAU, wf = TAU * p.waveFreq / 1000;
+  const phase = A.anim3d ? time * TAU : 0, wf = TAU * p.waveFreq / 1000;
   const items = [];
   for (let j = -n; j <= n; j++) for (let i = -n; i <= n; i++) {
-    let x = (i + fract(j * p.rowOffset / 100)) * s, y = (j + fract(i * p.colOffset / 100)) * s;
-    let scale = 1, rot = p.rot + i * p.rotCol + j * p.rotRow;
+    const I = i - fi, J = j - fj;
+    let x = (i + fx + fract(J * p.rowOffset / 100)) * s, y = (j + fy + fract(I * p.colOffset / 100)) * s;
+    let scale = 1, rot = rotNow + I * p.rotCol + J * p.rotRow;
     if (k) {
       if (dir === 'radial') { const r = Math.hypot(x, y) / 707; if (r > 1e-6) { const [r2, d] = warp(r); x *= r2 / r; y *= r2 / r; scale *= d; } }
       else {
@@ -686,8 +700,8 @@ function drawTexture(pt, p, C, time) {
         scale *= d;
       }
     }
-    const sizeMul = Math.max(0, 1 + p.sizeRamp / 100 * (clamp(axisT(x, y), 0, 1) * 2 - 1));
-    if (p.twist) { const r = Math.min(1.5, Math.hypot(x, y) / 707), a = p.twist * r * D2R, c = Math.cos(a), sn = Math.sin(a); [x, y] = [x * c - y * sn, x * sn + y * c]; rot += p.twist * r; }
+    const sizeMul = Math.max(0, 1 + p.sizeRamp / 100 * (clamp(axisT(x, y), 0, 1) * 2 - 1)) * (A.animSize ? 1 + 0.15 * Math.sin(time * TAU * 0.5 + (I + J) * 0.35) : 1);
+    if (twistNow) { const r = Math.min(1.5, Math.hypot(x, y) / 707), a = twistNow * r * D2R, c = Math.cos(a), sn = Math.sin(a); [x, y] = [x * c - y * sn, x * sn + y * c]; rot += twistNow * r; }
     if (p.bulge) { const b = p.bulge / 100, r = Math.hypot(x, y) / 500; if (r > 1e-6) { const f = r * (1 + b * Math.exp(-2 * r * r)); x *= f / r; y *= f / r; scale *= Math.max(0.05, f / r); } }
     const z = p.waveAmp ? p.waveAmp * Math.sin(wf * (x * 0.6 + y) + phase) : 0;
     const y3 = y * cosT - z * sinT, z3 = y * sinT + z * cosT, dz = D - z3;
@@ -700,11 +714,11 @@ function drawTexture(pt, p, C, time) {
     let si;
     const L = slots.length, mod = (v) => ((v % L) + L) % L;
     switch (p.order) {
-      case 'sequence': si = mod(i + j * (2 * n + 1)); break;
-      case 'row': si = mod(j); break;
-      case 'col': si = mod(i); break;
-      case 'random': si = Math.floor(hash3(i, j, 0, p.seed) * L); break;
-      default: si = mod(i + j);
+      case 'sequence': si = mod(I + J * (2 * n + 1)); break;
+      case 'row': si = mod(J); break;
+      case 'col': si = mod(I); break;
+      case 'random': si = Math.floor(hash3(I, J, 0, p.seed) * L); break;
+      default: si = mod(I + J);
     }
     const alpha = p.fog ? clamp(1 - (p.fog / 100) * clamp((1 - persp) * 2.6 + 0.08, 0, 1), 0, 1) : 1;
     if (alpha <= 0.01) continue;
