@@ -105,6 +105,9 @@ main.grid {
 
 .btn { appearance: none; font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); padding: 7px 12px; cursor: pointer; }
 .btn:hover { border-color: var(--muted); }
+.btn-sm { font-size: 11px; padding: 3px 8px; white-space: nowrap; flex: none; }
+.slots-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.slots-head h2 { min-width: 0; }
 .linkbtn { appearance: none; background: none; border: 0; padding: 0 0 3px; font: inherit; font-size: 13px; color: var(--ink); border-bottom: 1px solid var(--ink); cursor: pointer; }
 .linkbtn:hover { color: var(--accent); border-color: var(--accent); }
 .hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0; }
@@ -174,7 +177,10 @@ input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid
 
     <aside class="panel">
       <div class="section">
-        <h2>Shape slots <small>click a slot to make it the drop and paste target</small></h2>
+        <div class="slots-head">
+          <h2>Shape slots <small>click a slot to make it the drop and paste target</small></h2>
+          <button class="btn btn-sm" id="resetSlots" type="button">Reset slots</button>
+        </div>
         <div class="slots" id="slots"></div>
         <div class="pastebox" id="pasteBox" hidden>
           <textarea id="pasteTa" rows="5" placeholder="&lt;svg viewBox=&quot;0 0 100 100&quot;&gt;…&lt;/svg&gt;"></textarea>
@@ -183,7 +189,6 @@ input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid
             <button class="btn" id="pasteCancel" type="button">Cancel</button>
           </div>
         </div>
-        <div class="row"><button class="btn" id="resetSlots" type="button">Reset slots</button></div>
         <p class="err" id="err" hidden></p>
         <input type="file" id="fileIn" accept=".svg,image/svg+xml" hidden>
       </div>
