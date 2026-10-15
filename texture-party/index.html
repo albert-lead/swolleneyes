@@ -268,7 +268,7 @@ const SCHEMA = {
     { k: 'sizeRamp', t: 'range', label: 'Size Ramp', min: -100, max: 100, step: 1, def: -66, fmt: (v) => v + '%' },
     { k: 'scaleRamp', t: 'range', label: 'Scale Ramp', min: -100, max: 100, step: 1, def: 5, fmt: (v) => v + '%' },
     { t: 'hint', text: 'Size Ramp grows the shapes along the ramp while the grid stays even. Scale Ramp squeezes the whole grid toward one side, so spacing and size change together like a zoom.' },
-    { group: 'Depth', tag: '3D' },
+    { group: 'Depth', tag: '3D', reset: { label: 'Reset 3D values', keys: ['tilt', 'waveAmp', 'bulge', 'twist', 'extrude', 'fog'] } },
     { k: 'tilt', t: 'range', label: 'Perspective Tilt', min: 0, max: 75, step: 0.5, def: 14, fmt: (v) => v + '°' },
     { k: 'waveAmp', t: 'range', label: 'Wave Height', min: 0, max: 300, step: 1, def: 52, fmt: (v) => v + ' u' },
     { k: 'waveFreq', t: 'range', label: 'Wave Frequency', min: 0.25, max: 10, step: 0.05, def: 2.45, when: (p) => p.waveAmp > 0 },
@@ -1035,6 +1035,17 @@ function buildControls() {
       sec = document.createElement('div'); sec.className = 'section';
       const h = document.createElement('h2'); h.textContent = it.group;
       if (it.tag) { const tg = document.createElement('span'); tg.className = 'tag3d'; tg.textContent = it.tag; tg.style.marginLeft = '8px'; h.append(tg); }
+      if (it.reset) {
+        // Header row with a small button that zeroes this group's values.
+        const head = document.createElement('div'); head.className = 'slots-head';
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-sm'; b.textContent = it.reset.label;
+        b.addEventListener('click', () => {
+          for (const k of it.reset.keys) p[k] = 0;
+          changed(); buildControls();
+          toast(`${it.group} values set to 0.`);
+        });
+        head.append(h, b); sec.append(head); box.append(sec); continue;
+      }
       sec.append(h); box.append(sec); continue;
     }
     if (it.hide) continue; // kept in code, not shown
