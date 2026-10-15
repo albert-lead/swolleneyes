@@ -352,7 +352,7 @@ const SCHEMA = {
     { group: 'Extrusion', tag: '3D' },
     { k: 'depth', t: 'range', label: 'Extrude Depth', min: 0, max: 300, step: 1, def: 30, fmt: (v) => v + '%' },
     { k: 'depthNoise', t: 'range', label: 'Depth Variation', min: 0, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
-    { k: 'taper', t: 'range', label: 'Taper', min: 0, max: 200, step: 1, def: 100, fmt: (v) => v + '%' },
+    { k: 'taper', t: 'range', label: 'Taper', min: 0, max: 200, step: 1, def: 100, mark: 100, fmt: (v) => v + '%' },
     { k: 'twist', t: 'range', label: 'Twist Along Depth', min: -360, max: 360, step: 1, def: 0, fmt: (v) => v + '°' },
     { k: 'tone', t: 'range', label: 'Side Shade', min: 0, max: 100, step: 1, def: 55, fmt: (v) => v + '%' },
     { k: 'light', t: 'range', label: 'Lighting', min: 0, max: 100, step: 1, def: 40, fmt: (v) => v + '%' },
@@ -1045,9 +1045,9 @@ function controlEl(it, p) {
   if (it.t === 'range') {
     wrap.className = 'ctl';
     wrap.innerHTML = `<label for="${id}"></label><div class="rng"><input type="range" id="${id}" min="${it.min}" max="${it.max}" step="${it.step}"></div><output for="${id}"></output>`;
-    // Mark 0 on sliders that run through zero, or the default when it sits mid-track (e.g. Taper 100%).
-    const span = it.max - it.min, defPct = (it.def - it.min) / span;
-    const mark = it.min < 0 && it.max > 0 ? -it.min / span : Math.abs(defPct - 0.5) < 0.02 ? defPct : null;
+    // Mark 0 on sliders that run through zero, or an explicit neutral value (it.mark, e.g. Taper 100%).
+    const span = it.max - it.min;
+    const mark = it.min < 0 && it.max > 0 ? -it.min / span : it.mark !== undefined ? (it.mark - it.min) / span : null;
     if (mark !== null) {
       const tk = document.createElement('span'); tk.className = 'tick';
       tk.style.left = `calc(${(mark * 100).toFixed(3)}% + ${((0.5 - mark) * 14).toFixed(2)}px)`;
