@@ -393,16 +393,16 @@ const SCHEMA = {
   flow: [
     { group: 'Shape' },
     { k: 'slot', t: 'slot', label: 'Slot', def: 1, noNone: true },
-    { k: 'size', t: 'range', label: 'Shape Size', min: 5, max: 200, step: 0.5, def: 80, fmt: (v) => Math.round(v) + '%' },
+    { k: 'size', t: 'range', label: 'Shape Size', min: 5, max: 200, step: 0.5, def: 65, fmt: (v) => Math.round(v) + '%' },
     THICK, MODE,
     { group: 'Field' },
-    { k: 'grid', t: 'range', label: 'Grid Size', min: 3, max: 60, step: 1, def: 11 },
-    { k: 'flow', t: 'range', label: 'Flow Scale', min: 1, max: 100, step: 0.1, def: 34.8 },
-    { k: 'turb', t: 'range', label: 'Turbulence', min: 0, max: 4, step: 0.05, def: 2 },
-    { k: 'rot', t: 'range', label: 'Rotation Offset', min: 0, max: 360, step: 1, def: 0, fmt: (v) => v + '°' },
-    { k: 'mirror', t: 'check', label: 'Mirror left and right', def: true },
+    { k: 'grid', t: 'range', label: 'Grid Size', min: 3, max: 60, step: 1, def: 31 },
+    { k: 'flow', t: 'range', label: 'Flow Scale', min: 1, max: 100, step: 0.1, def: 16.3 },
+    { k: 'turb', t: 'range', label: 'Turbulence', min: 0, max: 4, step: 0.05, def: 1.05 },
+    { k: 'rot', t: 'range', label: 'Rotation Offset', min: 0, max: 360, step: 1, def: 172, fmt: (v) => v + '°' },
+    { k: 'mirror', t: 'check', label: 'Mirror left and right', def: false },
     { k: 'seed', t: 'seed', label: 'Seed', def: 1729 },
-    { group: 'Motion' }, ...ANIM,
+    { group: 'Motion' }, ANIM[0], { ...ANIM[1], def: 0.83 },
   ],
 };
 const ABOUT = {
