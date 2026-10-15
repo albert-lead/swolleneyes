@@ -165,7 +165,7 @@ input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid
         <div class="drop-hint" id="dropHint" hidden>Drop SVG into the selected slot</div>
       </div>
       <div class="meta"><span id="stats">–</span><span id="renderMs"></span></div>
-      <div class="looks-wrap">
+      <div class="looks-wrap" id="looksWrap">
         <span class="looks-label" id="looksLabel">Presets</span>
         <div class="looks" id="looks" role="group" aria-labelledby="looksLabel"></div>
       </div>
@@ -1085,6 +1085,7 @@ function buildControls() {
   applyWhen();
   document.querySelectorAll('#tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === state.tab)));
   $('about').textContent = ABOUT[state.tab];
+  $('looksWrap').hidden = state.tab !== 'texture'; // presets are Texture settings
 }
 function applyWhen() { const p = P(); for (const [el, fn] of whenList) el.hidden = !fn(p); }
 function changed() { applyWhen(); save(); syncAnim(); requestRender(); if (activeLook) { activeLook = null; buildLooks(); } }
