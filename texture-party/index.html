@@ -129,7 +129,7 @@ main.grid {
 .ctl.dbl { cursor: default; }
 .rng { position: relative; min-width: 0; }
 .rng input { position: relative; z-index: 1; display: block; }
-.rng .tick { position: absolute; top: 3px; width: 1px; height: 12px; background: var(--muted); pointer-events: none; }
+.rng .tick { position: absolute; top: 50%; width: 5px; height: 5px; border-radius: 50%; background: var(--muted); transform: translate(-50%, -50%); pointer-events: none; } /* zero / neutral point */
 /* --pct is set by script; the fill stops at the knob's center (knob is 14px wide). */
 input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer; --pct: 50; }
 input[type="range"]::-webkit-slider-runnable-track {
