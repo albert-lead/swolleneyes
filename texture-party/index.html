@@ -274,6 +274,7 @@ const SCHEMA = {
     { k: 'size', t: 'range', label: 'Shape Size', min: 4, max: 400, step: 1, def: 22, fmt: (v) => v + ' u' },
     THICK, MODE,
     { group: 'Grid' },
+    { k: 'zoom', t: 'range', label: 'Zoom', min: 25, max: 200, step: 1, def: 100, mark: 100, fmt: (v) => v + '%' },
     { k: 'spacing', t: 'range', label: 'Distance Between Shapes', min: 12, max: 240, step: 1, def: 28, fmt: (v) => v + ' u' },
     { k: 'rowOffset', t: 'range', label: 'Row Offset', min: 0, max: 100, step: 1, def: 54, fmt: (v) => v + '%' },
     { k: 'colOffset', t: 'range', label: 'Column Offset', min: 0, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
@@ -413,6 +414,7 @@ const SCHEMA = {
     THICK, MODE,
     { group: 'Field' },
     { k: 'grid', t: 'range', label: 'Grid Size', min: 3, max: 60, step: 1, def: 31 },
+    { k: 'zoom', t: 'range', label: 'Zoom', min: 25, max: 200, step: 1, def: 100, mark: 100, fmt: (v) => v + '%' },
     { k: 'flow', t: 'range', label: 'Flow Scale', min: 1, max: 100, step: 0.1, def: 16.3 },
     { k: 'turb', t: 'range', label: 'Turbulence', min: 0, max: 4, step: 0.05, def: 1.05 },
     { k: 'rot', t: 'range', label: 'Rotation Offset', min: 0, max: 360, step: 1, def: 172, fmt: (v) => v + '°' },
@@ -698,7 +700,8 @@ function drawTexture(pt, p, C, time) {
   const twistNow = p.twist + (A.animSwirl ? 45 * Math.sin(time * TAU * 0.2) : 0);
   const rotNow = p.rot + (A.animRot ? time * 60 : 0);
   const drift = A.animDrift ? time * 1.5 : 0, fi = Math.floor(drift), fx = drift - fi, fj = Math.floor(drift * 0.5), fy = drift * 0.5 - fj;
-  const s = p.spacing, th = tiltNow * D2R, D = 1500, cosT = Math.cos(th), sinT = Math.sin(th);
+  const zm = (p.zoom || 100) / 100; // zoom scales every length, so more (or fewer) shapes fit the frame
+  const s = p.spacing * zm, th = tiltNow * D2R, D = 1500, cosT = Math.cos(th), sinT = Math.sin(th);
   const extra = 1.25 + 3 * sinT + Math.max(0, -p.bulge / 100) * 0.8 + (p.twist ? 0.45 : 0) + Math.abs(p.scaleRamp / 100) * 0.6;
   // Row/column offsets shear the lattice instead of wrapping, so both together never leave a seam.
   const rs = shear(p.rowOffset), cs = shear(p.colOffset), det = 1 - rs * cs;
@@ -708,8 +711,8 @@ function drawTexture(pt, p, C, time) {
     const ii = (u - rs * v) / det, jj = (v - cs * u) / det;
     iMin = Math.min(iMin, ii); iMax = Math.max(iMax, ii); jMin = Math.min(jMin, jj); jMax = Math.max(jMax, jj);
   }
-  iMin = Math.max(-80, Math.floor(iMin) - 2); iMax = Math.min(80, Math.ceil(iMax) + 2);
-  jMin = Math.max(-80, Math.floor(jMin) - 2); jMax = Math.min(80, Math.ceil(jMax) + 2);
+  iMin = Math.max(-140, Math.floor(iMin) - 2); iMax = Math.min(140, Math.ceil(iMax) + 2);
+  jMin = Math.max(-140, Math.floor(jMin) - 2); jMax = Math.min(140, Math.ceil(jMax) + 2);
   const rowW = iMax - iMin + 1;
   const k = p.scaleRamp / 100 * 2.5, ek = Math.exp(k) - 1;
   const warp = (t) => Math.abs(k) < 1e-3 ? [t, 1] : [(Math.exp(k * t) - 1) / ek, k * Math.exp(k * t) / ek];
@@ -733,13 +736,13 @@ function drawTexture(pt, p, C, time) {
     const sizeMul = Math.max(0, 1 + p.sizeRamp / 100 * (clamp(axisT(x, y), 0, 1) * 2 - 1)) * (A.animSize ? 1 + 0.15 * Math.sin(time * TAU * 0.5 + (I + J) * 0.35) : 1);
     if (twistNow) { const r = Math.min(1.5, Math.hypot(x, y) / 707), a = twistNow * r * D2R, c = Math.cos(a), sn = Math.sin(a); [x, y] = [x * c - y * sn, x * sn + y * c]; rot += twistNow * r; }
     if (p.bulge) { const b = p.bulge / 100, r = Math.hypot(x, y) / 500; if (r > 1e-6) { const f = r * (1 + b * Math.exp(-2 * r * r)); x *= f / r; y *= f / r; scale *= Math.max(0.05, f / r); } }
-    const z = p.waveAmp ? p.waveAmp * Math.sin(wf * (x * 0.6 + y) + phase) : 0;
+    const z = p.waveAmp ? p.waveAmp * zm * Math.sin(wf * (x * 0.6 + y) + phase) : 0;
     const y3 = y * cosT - z * sinT, z3 = y * sinT + z * cosT, dz = D - z3;
     if (dz < 120) continue;
     const persp = D / dz, sx = 500 + x * persp, sy = 500 + y3 * persp;
-    const size = p.size * scale * sizeMul * persp;
+    const size = p.size * zm * scale * sizeMul * persp;
     if (size < 0.25) continue;
-    const reach = size + p.extrude * persp;
+    const reach = size + p.extrude * zm * persp;
     if (sx < -reach || sx > 1000 + reach || sy < -reach || sy > 1000 + reach) continue;
     let si;
     const L = slots.length, mod = (v) => ((v % L) + L) % L;
@@ -763,7 +766,7 @@ function drawTexture(pt, p, C, time) {
     if (layers) {
       const shade = color ? mix(color, C.paper, 0.55) : null;
       for (let q = layers; q >= 1; q--) {
-        const off = p.extrude * q / layers * it.persp;
+        const off = p.extrude * zm * q / layers * it.persp;
         pt.glyph(g, rotM(it.rot, it.sx + ex * off, it.sy + ey * off), w, h, shade, it.alpha * (color ? 1 : 0.5));
       }
     }
@@ -918,11 +921,12 @@ function drawFlow(pt, p, C, time) {
   seedNoise(p.seed);
   const si = state.active; if (!state.slots[si]) return `Slot ${si + 1} is empty`;
   const g = G(si, p.thickness, p.mode); if (!g) return;
-  const N = p.grid, pad = 70, cell = (1000 - pad * 2) / N, freq = p.flow / 100;
+  const zm = (p.zoom || 100) / 100, N = Math.max(1, Math.round(p.grid / zm)), shift = (N - p.grid) / 2; // zoom out = more cells of the same field
+  const pad = 70, cell = (1000 - pad * 2) / N, freq = p.flow / 100;
   const [w, h] = fitDims(g, cell * p.size / 100);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
     const sx = p.mirror ? Math.abs(i - (N - 1) / 2) : i;
-    let a = noise3(sx * freq + 0.31, j * freq + 0.17, time) * Math.PI * p.turb + p.rot * D2R;
+    let a = noise3((sx - shift) * freq + 0.31, (j - shift) * freq + 0.17, time) * Math.PI * p.turb + p.rot * D2R;
     if (p.mirror && i < (N - 1) / 2) a = Math.PI - a;
     pt.glyph(g, rotM(a, pad + (i + 0.5) * cell, pad + (j + 0.5) * cell), w, h, C.slot[si]);
   }
