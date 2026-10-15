@@ -1022,7 +1022,7 @@ function tick(ts) {
   render();
   raf = requestAnimationFrame(tick);
 }
-function syncAnim() { if (P().anim && !raf) { lastTs = 0; raf = requestAnimationFrame(tick); } }
+function syncAnim() { if (P().anim) { cancelAnimationFrame(raf); lastTs = 0; raf = requestAnimationFrame(tick); } } // restart cleanly, never stack loops
 
 // ---------------- Controls ----------------
 const fmtDefault = (v) => (Number.isInteger(+v) ? v : (+v).toFixed(2));
@@ -1220,7 +1220,7 @@ const LOOKS = [
   { id: 'wave', name: 'Wave', p: null },
   { id: 'basic', name: 'Basic Grid', p: { size: 43, spacing: 60, rowOffset: 0, colOffset: 25, rot: 0, rotRow: 0, rotCol: 0, rampDir: 'diagonal', sizeRamp: 0, scaleRamp: 0, tilt: 0, waveAmp: 0, bulge: 0, twist: 0, extrude: 0, fog: 0 } },
   { id: 'guilloche', name: 'Guilloche', p: { size: 14, spacing: 20, rowOffset: 46, colOffset: 0, rot: 180, rotRow: 15, rotCol: -11.5, rampDir: 'diagonal', sizeRamp: -35, scaleRamp: -5, tilt: 0, waveAmp: 208, waveFreq: 1.35, bulge: 0, twist: 0, extrude: 0, extrudeAngle: 135, fog: 0, anim: false, speed: 0.32, seed: 7 } },
-  { id: 'whereami', name: 'Where am I?', p: undefined },
+  { id: 'whereami', name: 'Where am I?', p: { size: 14, spacing: 25, rowOffset: 56, colOffset: 0, rot: 141, rotRow: 15, rotCol: -20, rampDir: 'diagonal', sizeRamp: 20, scaleRamp: -24, tilt: 54.5, waveAmp: 43, waveFreq: 1.35, bulge: 0, twist: 0, extrude: 0, extrudeAngle: 0, fog: 100, anim: true, speed: 0.32, seed: 7 } },
 ];
 let activeLook = null;
 function buildLooks() {
