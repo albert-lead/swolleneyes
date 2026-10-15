@@ -416,7 +416,7 @@ const SCHEMA = {
     { k: 'flow', t: 'range', label: 'Flow Scale', min: 1, max: 100, step: 0.1, def: 16.3 },
     { k: 'turb', t: 'range', label: 'Turbulence', min: 0, max: 4, step: 0.05, def: 1.05 },
     { k: 'rot', t: 'range', label: 'Rotation Offset', min: 0, max: 360, step: 1, def: 172, fmt: (v) => v + '°' },
-    { k: 'mirror', t: 'check', label: 'Mirror left and right', def: false },
+    { k: 'mirror', t: 'check', label: 'Mirror left and right', hide: true, def: false },
     { k: 'seed', t: 'seed', label: 'Seed', def: 1729 },
     { group: 'Motion' }, ANIM[0], { ...ANIM[1], def: 0.83 },
   ],
