@@ -10,24 +10,28 @@
 <style>
 /* Layout: sticky square plotter bed on the left, instrument column on the right; tool tabs above; stacks on phones. */
 :root {
-  --bg: #f3f3f0;
-  --surface: #e9e9e4;
-  --ink: #1b1c1a;
-  --muted: #6c6e68;
-  --rule: #d2d3cc;
-  --accent: #2f5bd3;
+  --bg: #f5f4f8;
+  --surface: #ebe9f1;
+  --ink: #1a1726;
+  --muted: #6d6880;
+  --rule: #d6d3e0;
+  --accent: #4b3bd6;
+  --track-on: color-mix(in srgb, var(--ink) 70%, transparent);
+  --track-off: color-mix(in srgb, var(--ink) 16%, transparent);
+  --knob: color-mix(in srgb, var(--ink) 55%, transparent);
+  --knob-hover: color-mix(in srgb, var(--ink) 80%, transparent);
   --danger: #b23a2b;
   --font-ui: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
   --font-data: "JetBrains Mono", ui-monospace, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121312; --surface: #1c1d1c; --ink: #e4e4df; --muted: #8b8d86; --rule: #2c2e2b; --accent: #7d9cff; --danger: #f0806f;
+    --bg: #07021d; --surface: #120c2c; --ink: #ece9f5; --muted: #8f8aa8; --rule: #251f40; --accent: #a497ff; --danger: #f28b7a;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #121312; --surface: #1c1d1c; --ink: #e4e4df; --muted: #8b8d86; --rule: #2c2e2b; --accent: #7d9cff; --danger: #f0806f;
+  --bg: #07021d; --surface: #120c2c; --ink: #ece9f5; --muted: #8f8aa8; --rule: #251f40; --accent: #a497ff; --danger: #f28b7a;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -43,7 +47,7 @@ header.top {
 }
 h1 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
 .sub { color: var(--muted); font-size: 13px; }
-.sub a { color: inherit; text-underline-offset: 3px; }
+.sub a { color: inherit; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .sub a:hover { color: var(--ink); }
 nav.tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--rule); margin-top: 20px; overflow-x: auto; }
 nav.tabs button {
@@ -85,7 +89,7 @@ main.grid {
 .about { margin-top: 20px; color: var(--muted); line-height: 1.6; max-width: 65ch; font-size: 13px; }
 
 .panel { min-width: 0; display: flex; flex-direction: column; gap: 30px; }
-.section { display: flex; flex-direction: column; gap: 14px; }
+.section { display: flex; flex-direction: column; gap: 22px; }
 .section h2 { margin: 0; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .section h2 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
 
@@ -102,7 +106,7 @@ main.grid {
 .slot-num { position: absolute; top: 5px; left: 7px; font-family: var(--font-data); font-size: 10px; color: var(--muted); }
 .slot-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .slot-actions { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; }
-.slot-actions button { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.slot-actions button { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: var(--muted); cursor: pointer; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .slot-actions button:hover { color: var(--ink); }
 .slot select { width: 100%; font-size: 12px; padding: 4px 6px; }
 .pastebox textarea { width: 100%; font-family: var(--font-data); font-size: 11px; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); padding: 8px; }
@@ -112,25 +116,33 @@ main.grid {
 .btn-sm { font-size: 11px; padding: 3px 8px; white-space: nowrap; flex: none; }
 .slots-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .slots-head h2 { min-width: 0; }
-.linkbtn { appearance: none; background: none; border: 0; padding: 0 0 3px; font: inherit; font-size: 13px; color: var(--ink); border-bottom: 1px solid var(--ink); cursor: pointer; }
+.linkbtn { appearance: none; background: none; border: 0; padding: 0 0 3px; font: inherit; font-size: 13px; color: var(--ink); border-bottom: 1px dotted var(--muted); cursor: pointer; }
 .linkbtn:hover { color: var(--accent); border-color: var(--accent); }
 .hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0; }
 .err { font-size: 12px; color: var(--danger); margin: 0; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Controls */
-.ctl { display: grid; grid-template-columns: minmax(0, 1fr) 64px; column-gap: 14px; row-gap: 6px; }
+.ctl { display: grid; grid-template-columns: minmax(0, 1fr) 64px; column-gap: 16px; row-gap: 12px; }
 .ctl label { grid-column: 1 / -1; font-size: 13px; font-weight: 500; display: flex; justify-content: space-between; gap: 8px; }
 .ctl output { font-family: var(--font-data); font-size: 11px; color: var(--muted); text-align: right; align-self: center; font-variant-numeric: tabular-nums; }
 .ctl.dbl { cursor: default; }
 .rng { position: relative; min-width: 0; }
 .rng input { position: relative; z-index: 1; display: block; }
-.rng .tick { position: absolute; top: 2px; width: 1px; height: 14px; background: var(--muted); pointer-events: none; }
-input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer; }
-input[type="range"]::-webkit-slider-runnable-track { height: 1px; background: var(--muted); }
-input[type="range"]::-moz-range-track { height: 1px; background: var(--muted); }
-input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--ink); margin-top: -7px; }
-input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--ink); }
+.rng .tick { position: absolute; top: 3px; width: 1px; height: 12px; background: var(--muted); pointer-events: none; }
+/* --pct is set by script; the fill stops at the knob's center (knob is 14px wide). */
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer; --pct: 50; }
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px; border-radius: 2px;
+  background: linear-gradient(to right, var(--track-on) 0, var(--track-on) calc(var(--pct) * 1% + (0.5 - var(--pct) / 100) * 14px), var(--track-off) 0);
+}
+input[type="range"]::-moz-range-track { height: 2px; border-radius: 2px; background: var(--track-off); }
+input[type="range"]::-moz-range-progress { height: 2px; border-radius: 2px; background: var(--track-on); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--knob); border: 0; margin-top: -6px; transition: background 0.15s, transform 0.15s; }
+input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--knob); border: 0; transition: background 0.15s, transform 0.15s; }
+input[type="range"]:hover::-webkit-slider-thumb, input[type="range"]:active::-webkit-slider-thumb { background: var(--knob-hover); transform: scale(1.1); }
+input[type="range"]:hover::-moz-range-thumb, input[type="range"]:active::-moz-range-thumb { background: var(--knob-hover); transform: scale(1.1); }
+@media (prefers-reduced-motion: reduce) { input[type="range"]::-webkit-slider-thumb, input[type="range"]::-moz-range-thumb { transition: none; } }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .row > .lbl { font-size: 13px; font-weight: 500; min-width: 96px; }
 select { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); padding: 6px 8px; }
@@ -1106,11 +1118,12 @@ function controlEl(it, p) {
     }
     wrap.querySelector('label').textContent = it.label;
     const inp = wrap.querySelector('input'), out = wrap.querySelector('output'), fmt = it.fmt || fmtDefault;
-    inp.value = p[it.k]; out.textContent = fmt(p[it.k]);
-    inp.addEventListener('input', () => { p[it.k] = +inp.value; out.textContent = fmt(p[it.k]); changed(); });
+    const setPct = () => inp.style.setProperty('--pct', ((inp.value - it.min) / (it.max - it.min) * 100).toFixed(2));
+    inp.value = p[it.k]; out.textContent = fmt(p[it.k]); setPct();
+    inp.addEventListener('input', () => { p[it.k] = +inp.value; out.textContent = fmt(p[it.k]); setPct(); changed(); });
     // Double-click: sliders that run through zero snap to 0 (or their neutral mark); others reset to their default.
     const snap = it.min < 0 && it.max > 0 ? 0 : it.mark !== undefined ? it.mark : it.def;
-    inp.addEventListener('dblclick', () => { p[it.k] = snap; inp.value = snap; out.textContent = fmt(snap); changed(); });
+    inp.addEventListener('dblclick', () => { p[it.k] = snap; inp.value = snap; out.textContent = fmt(snap); setPct(); changed(); });
     inp.title = snap === it.def ? 'Double-click to reset' : `Double-click to snap to ${fmt(snap)}`;
     return wrap;
   }
