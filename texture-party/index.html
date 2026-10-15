@@ -69,6 +69,11 @@ main.grid {
   display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px;
   font-family: var(--font-data); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums;
 }
+.looks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.look { appearance: none; font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 1px solid var(--rule); padding: 7px 14px; cursor: pointer; }
+.look:hover:not(:disabled) { border-color: var(--muted); }
+.look[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.look:disabled { color: var(--muted); border-style: dashed; cursor: default; }
 .actions { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
 .dlpng { display: inline-flex; gap: 8px; align-items: center; }
 .dlpng select { font-size: 12px; padding: 3px 6px; }
@@ -153,6 +158,7 @@ input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid
         <div class="drop-hint" id="dropHint" hidden>Drop SVG into the selected slot</div>
       </div>
       <div class="meta"><span id="stats">–</span><span id="renderMs"></span></div>
+      <div class="looks" id="looks" role="group" aria-label="Texture presets"></div>
       <div class="actions">
         <button class="linkbtn" id="copySvg" type="button">Copy as SVG</button>
         <button class="linkbtn" id="copyPng" type="button">Copy as PNG</button>
@@ -160,6 +166,7 @@ input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid
         <span class="dlpng"><button class="linkbtn" id="dlPng" type="button">Download PNG</button>
           <select id="pngSize" aria-label="PNG size"><option value="1000">1000 px</option><option value="2000" selected>2000 px</option><option value="4000">4000 px</option></select></span>
         <button class="linkbtn" id="resetTab" type="button">Reset this tool</button>
+        <button class="linkbtn" id="copySettings" type="button">Copy settings</button>
       </div>
       <p class="toast" id="toast" aria-live="polite"></p>
       <p class="about" id="about"></p>
@@ -1030,7 +1037,7 @@ function buildControls() {
   $('about').textContent = ABOUT[state.tab];
 }
 function applyWhen() { const p = P(); for (const [el, fn] of whenList) el.hidden = !fn(p); }
-function changed() { applyWhen(); save(); syncAnim(); requestRender(); }
+function changed() { applyWhen(); save(); syncAnim(); requestRender(); if (activeLook) { activeLook = null; buildLooks(); } }
 function controlEl(it, p) {
   const id = `${state.tab}-${it.k || 'hint'}`;
   const wrap = document.createElement('div');
@@ -1108,12 +1115,12 @@ function buildSlots() {
     el.innerHTML = `
       <button class="slot-thumb" type="button" id="slot-${i}" aria-pressed="${state.active === i}"><span class="slot-num">${i + 1}</span>${s ? '' : 'Empty'}</button>
       <div class="slot-name"></div>
-      <div class="slot-actions"><button type="button" data-a="upload">Upload</button><button type="button" data-a="paste">Paste</button>${s ? '<button type="button" data-a="clear">Clear</button>' : ''}</div>
+      ${i < 2 ? '' : `<div class="slot-actions"><button type="button" data-a="upload">Upload</button><button type="button" data-a="paste">Paste</button>${s ? '<button type="button" data-a="clear">Clear</button>' : ''}</div>`}
       <select id="slot-preset-${i}" aria-label="Load a preset into slot ${i + 1}"><option value="">Preset…</option>${Object.entries(PRESETS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('')}</select>`;
     el.querySelector('.slot-name').textContent = s ? s.name : '—';
     el.querySelector('.slot-thumb').addEventListener('click', () => { state.active = i; save(); document.querySelectorAll('.slot-thumb').forEach((b, k) => b.setAttribute('aria-pressed', String(k === i))); });
-    el.querySelector('[data-a="upload"]').addEventListener('click', () => { state.active = i; $('fileIn').click(); });
-    el.querySelector('[data-a="paste"]').addEventListener('click', () => openPaste(i));
+    el.querySelector('[data-a="upload"]')?.addEventListener('click', () => { state.active = i; $('fileIn').click(); });
+    el.querySelector('[data-a="paste"]')?.addEventListener('click', () => openPaste(i));
     el.querySelector('[data-a="clear"]')?.addEventListener('click', () => { state.slots[i] = null; afterSlotChange(); });
     el.querySelector('select').addEventListener('change', (e) => { const pr = PRESETS[e.target.value]; if (pr) setSlot(i, pr.svg, pr.name); });
     box.append(el);
@@ -1184,6 +1191,33 @@ for (const [id, key] of [['c-paper', 'paper'], ['c-ink', 'ink'], ['c-s2', 's2'],
 $('c-per').addEventListener('change', (e) => { state.colors.per = e.target.checked; onColor(); });
 $('c-keep').addEventListener('change', (e) => { state.colors.keep = e.target.checked; onColor(); });
 
+// ---------------- Texture presets ----------------
+// p: null = the Texture defaults; undefined = not defined yet (button shows disabled).
+const LOOKS = [
+  { id: 'wave', name: 'Wave', p: null },
+  { id: 'basic', name: 'Basic Grid', p: undefined },
+  { id: 'guilloche', name: 'Guilloche', p: undefined },
+  { id: 'whereami', name: 'Where am I?', p: undefined },
+];
+let activeLook = null;
+function buildLooks() {
+  const box = $('looks'); box.innerHTML = '';
+  for (const l of LOOKS) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'look'; b.id = 'look-' + l.id; b.textContent = l.name;
+    b.setAttribute('aria-pressed', String(activeLook === l.id));
+    if (l.p === undefined) { b.disabled = true; b.title = 'Coming soon'; }
+    b.addEventListener('click', () => applyLook(l));
+    box.append(b);
+  }
+}
+function applyLook(l) {
+  state.p.texture = { ...defaultsFor('texture'), ...(l.p ? JSON.parse(JSON.stringify(l.p)) : {}) };
+  time = 0; activeLook = l.id;
+  setTab('texture'); buildControls(); buildLooks(); requestRender();
+  toast(`Loaded the ${l.name} preset.`);
+}
+
 // ---------------- Tabs ----------------
 function setTab(tab) {
   if (!tabOk(tab)) return;
@@ -1191,6 +1225,12 @@ function setTab(tab) {
   try { history.replaceState(null, '', '#' + tab); } catch (_) {}
 }
 document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
+$('copySettings').addEventListener('click', () => {
+  const txt = JSON.stringify({ tab: state.tab, params: state.p[state.tab] });
+  navigator.clipboard.writeText(txt).then(
+    () => toast('Settings copied. Paste them in chat to turn them into a preset.'),
+    () => { $('pasteBox').hidden = false; $('pasteTa').value = txt; $('pasteTa').select(); toast('Clipboard was blocked. The settings are selected in the box under the slots; press Cmd/Ctrl+C.'); });
+});
 $('resetTab').addEventListener('click', () => { state.p[state.tab] = defaultsFor(state.tab); time = 0; save(); buildControls(); requestRender(); toast('Tool settings reset. Your slots were kept.'); });
 
 // ---------------- Export ----------------
@@ -1248,7 +1288,7 @@ restore();
 const hashTab = (location.hash || '').slice(1);
 if (tabOk(hashTab)) state.tab = hashTab;
 if (matchMedia('(prefers-reduced-motion: reduce)').matches) for (const t in state.p) state.p[t].anim = false;
-buildSlots(); syncColorsUi(); buildControls(); render(); syncAnim();
+buildSlots(); syncColorsUi(); buildControls(); buildLooks(); render(); syncAnim();
 document.fonts?.ready.then(requestRender);
 })();
 </script>
