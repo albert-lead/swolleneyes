@@ -111,6 +111,9 @@ main.grid {
 .ctl label { grid-column: 1 / -1; font-size: 13px; font-weight: 500; display: flex; justify-content: space-between; gap: 8px; }
 .ctl output { font-family: var(--font-data); font-size: 11px; color: var(--muted); text-align: right; align-self: center; font-variant-numeric: tabular-nums; }
 .ctl.dbl { cursor: default; }
+.rng { position: relative; min-width: 0; }
+.rng input { position: relative; z-index: 1; display: block; }
+.rng .tick { position: absolute; top: 2px; width: 1px; height: 14px; background: var(--muted); pointer-events: none; }
 input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer; }
 input[type="range"]::-webkit-slider-runnable-track { height: 1px; background: var(--muted); }
 input[type="range"]::-moz-range-track { height: 1px; background: var(--muted); }
@@ -1001,7 +1004,15 @@ function controlEl(it, p) {
   if (it.t === 'hint') { wrap.className = 'hint'; wrap.textContent = it.text; return wrap; }
   if (it.t === 'range') {
     wrap.className = 'ctl';
-    wrap.innerHTML = `<label for="${id}"></label><input type="range" id="${id}" min="${it.min}" max="${it.max}" step="${it.step}"><output for="${id}"></output>`;
+    wrap.innerHTML = `<label for="${id}"></label><div class="rng"><input type="range" id="${id}" min="${it.min}" max="${it.max}" step="${it.step}"></div><output for="${id}"></output>`;
+    // Mark 0 on sliders that run through zero, or the default when it sits mid-track (e.g. Taper 100%).
+    const span = it.max - it.min, defPct = (it.def - it.min) / span;
+    const mark = it.min < 0 && it.max > 0 ? -it.min / span : Math.abs(defPct - 0.5) < 0.02 ? defPct : null;
+    if (mark !== null) {
+      const tk = document.createElement('span'); tk.className = 'tick';
+      tk.style.left = `calc(${(mark * 100).toFixed(3)}% + ${((0.5 - mark) * 14).toFixed(2)}px)`;
+      wrap.querySelector('.rng').prepend(tk);
+    }
     wrap.querySelector('label').textContent = it.label;
     const inp = wrap.querySelector('input'), out = wrap.querySelector('output'), fmt = it.fmt || fmtDefault;
     inp.value = p[it.k]; out.textContent = fmt(p[it.k]);
