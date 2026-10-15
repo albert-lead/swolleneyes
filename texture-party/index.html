@@ -363,7 +363,7 @@ const SCHEMA = {
     { k: 'roll', t: 'range', label: 'Roll', min: -180, max: 180, step: 0.5, def: 0, fmt: (v) => v + '°' },
     { k: 'persp', t: 'range', label: 'Perspective', min: 0, max: 100, step: 1, def: 0, fmt: (v) => v == 0 ? 'iso' : v + '%' },
     { k: 'zoom', t: 'range', label: 'Zoom', min: 30, max: 250, step: 1, def: 100, fmt: (v) => v + '%' },
-    { t: 'hint', text: 'Yaw 45° and Pitch 35.3° with no perspective is true isometric. Double-click any slider to reset it.' },
+    { t: 'hint', text: 'Yaw 45° and Pitch 35.3° with no perspective is true isometric. Double-click a slider to snap it to 0 (or back to its default).' },
     { group: 'Motion' },
     { k: 'anim', t: 'check', label: 'Animate', def: false },
     { k: 'animMode', t: 'select', label: 'Motion', def: 'spin', opts: [['spin', 'Spin camera'], ['tilt', 'Flip shapes'], ['wave', 'Travel wave'], ['depth', 'Breathe depth']], when: (p) => p.anim },
@@ -1057,8 +1057,10 @@ function controlEl(it, p) {
     const inp = wrap.querySelector('input'), out = wrap.querySelector('output'), fmt = it.fmt || fmtDefault;
     inp.value = p[it.k]; out.textContent = fmt(p[it.k]);
     inp.addEventListener('input', () => { p[it.k] = +inp.value; out.textContent = fmt(p[it.k]); changed(); });
-    inp.addEventListener('dblclick', () => { p[it.k] = it.def; inp.value = it.def; out.textContent = fmt(it.def); changed(); });
-    inp.title = 'Double-click to reset';
+    // Double-click: sliders that run through zero snap to 0 (or their neutral mark); others reset to their default.
+    const snap = it.min < 0 && it.max > 0 ? 0 : it.mark !== undefined ? it.mark : it.def;
+    inp.addEventListener('dblclick', () => { p[it.k] = snap; inp.value = snap; out.textContent = fmt(snap); changed(); });
+    inp.title = snap === it.def ? 'Double-click to reset' : `Double-click to snap to ${fmt(snap)}`;
     return wrap;
   }
   if (it.t === 'select' || it.t === 'slot') {
@@ -1195,7 +1197,7 @@ $('c-keep').addEventListener('change', (e) => { state.colors.keep = e.target.che
 // p: null = the Texture defaults; undefined = not defined yet (button shows disabled).
 const LOOKS = [
   { id: 'wave', name: 'Wave', p: null },
-  { id: 'basic', name: 'Basic Grid', p: undefined },
+  { id: 'basic', name: 'Basic Grid', p: { size: 43, spacing: 60, rowOffset: 0, colOffset: 25, rot: 0, rotRow: 0, rotCol: 0, rampDir: 'diagonal', sizeRamp: 0, scaleRamp: 0, tilt: 0, waveAmp: 0, bulge: 0, twist: 0, extrude: 0, fog: 0 } },
   { id: 'guilloche', name: 'Guilloche', p: undefined },
   { id: 'whereami', name: 'Where am I?', p: undefined },
 ];
