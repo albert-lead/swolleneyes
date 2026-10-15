@@ -104,7 +104,7 @@ main.grid {
 .slot-actions { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; }
 .slot-actions button { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .slot-actions button:hover { color: var(--ink); }
-.slot select { width: 100%; font-size: 12px; padding: 4px 6px; margin-top: auto; } /* keeps all three menus on one line */
+.slot select { width: 100%; font-size: 12px; padding: 4px 6px; }
 .pastebox textarea { width: 100%; font-family: var(--font-data); font-size: 11px; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); padding: 8px; }
 
 .btn { appearance: none; font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); padding: 7px 12px; cursor: pointer; }
@@ -185,7 +185,7 @@ input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid
     <aside class="panel">
       <div class="section">
         <div class="slots-head">
-          <h2>Shape slots <small>click a slot to make it the drop and paste target</small></h2>
+          <h2>Shape slots <small>click a slot to use it</small></h2>
           <button class="btn btn-sm" id="resetSlots" type="button">Reset slots</button>
         </div>
         <div class="slots" id="slots"></div>
@@ -253,8 +253,8 @@ const ANIM = [{ k: 'anim', t: 'check', label: 'Animate', def: false }, { k: 'spe
 const SCHEMA = {
   texture: [
     { group: 'Shapes' },
-    { k: 'use', t: 'slots', label: 'Shapes in pattern', def: [true, false, false] },
-    { k: 'order', t: 'select', label: 'Arrangement', def: 'checker', when: (p) => p.use.filter(Boolean).length > 1, opts: [['checker', 'Checkerboard'], ['sequence', 'Sequence'], ['row', 'By row'], ['col', 'By column'], ['random', 'Random']] },
+    { k: 'use', t: 'slots', label: 'Shapes in pattern', hide: true, def: [true, false, false] },
+    { k: 'order', t: 'select', label: 'Arrangement', hide: true, def: 'checker', when: (p) => p.use.filter(Boolean).length > 1, opts: [['checker', 'Checkerboard'], ['sequence', 'Sequence'], ['row', 'By row'], ['col', 'By column'], ['random', 'Random']] },
     { k: 'size', t: 'range', label: 'Shape Size', min: 4, max: 400, step: 1, def: 22, fmt: (v) => v + ' u' },
     THICK, MODE,
     { group: 'Grid' },
@@ -340,8 +340,8 @@ const SCHEMA = {
   ],
   extrude: [
     { group: 'Shapes' },
-    { k: 'use', t: 'slots', label: 'Shapes in pattern', def: [true, false, false] },
-    { k: 'order', t: 'select', label: 'Arrangement', def: 'checker', when: (p) => p.use.filter(Boolean).length > 1, opts: [['checker', 'Checkerboard'], ['sequence', 'Sequence'], ['row', 'By row'], ['col', 'By column'], ['random', 'Random']] },
+    { k: 'use', t: 'slots', label: 'Shapes in pattern', hide: true, def: [true, false, false] },
+    { k: 'order', t: 'select', label: 'Arrangement', hide: true, def: 'checker', when: (p) => p.use.filter(Boolean).length > 1, opts: [['checker', 'Checkerboard'], ['sequence', 'Sequence'], ['row', 'By row'], ['col', 'By column'], ['random', 'Random']] },
     { k: 'size', t: 'range', label: 'Shape Size', min: 10, max: 250, step: 1, def: 85, fmt: (v) => v + '%' },
     THICK, MODE,
     { group: 'Grid' },
@@ -392,7 +392,7 @@ const SCHEMA = {
   ],
   flow: [
     { group: 'Shape' },
-    { k: 'slot', t: 'slot', label: 'Slot', def: 1, noNone: true },
+    { k: 'slot', t: 'slot', label: 'Slot', hide: true, def: 1, noNone: true },
     { k: 'size', t: 'range', label: 'Shape Size', min: 5, max: 200, step: 0.5, def: 65, fmt: (v) => Math.round(v) + '%' },
     THICK, MODE,
     { group: 'Field' },
@@ -674,8 +674,8 @@ const rotM = (a, x, y, s = 1) => { const c = Math.cos(a) * s, n = Math.sin(a) * 
 // ---------------- Texture ----------------
 function drawTexture(pt, p, C, time) {
   pt.rect(C.paper);
-  const slots = [0, 1, 2].filter((i) => p.use[i] && state.slots[i]);
-  if (!slots.length) return 'Turn on at least one filled slot';
+  const slots = state.slots[state.active] ? [state.active] : []; // the selected slot is the shape
+  if (!slots.length) return `Slot ${state.active + 1} is empty`;
   const gl = slots.map((i) => G(i, p.thickness, p.mode));
   const A = p.anim ? p : {}; // animation toggles only count while Animate is on
   const tiltNow = p.tilt + (A.anim3d && p.tilt > 0 ? 5 * Math.sin(time * TAU * 0.25) : 0);
@@ -900,7 +900,7 @@ function drawCubes(pt, p, C, time) {
 function drawFlow(pt, p, C, time) {
   pt.rect(C.paper);
   seedNoise(p.seed);
-  const si = p.slot - 1; if (!state.slots[si]) return 'Slot ' + p.slot + ' is empty';
+  const si = state.active; if (!state.slots[si]) return `Slot ${si + 1} is empty`;
   const g = G(si, p.thickness, p.mode); if (!g) return;
   const N = p.grid, pad = 70, cell = (1000 - pad * 2) / N, freq = p.flow / 100;
   const [w, h] = fitDims(g, cell * p.size / 100);
@@ -938,8 +938,8 @@ function camera(yaw, pitch, roll) {
 function drawExtrude(pt, p, C, time) {
   pt.rect(C.paper);
   seedNoise(p.seed);
-  const slots = [0, 1, 2].filter((i) => p.use[i] && state.slots[i]);
-  if (!slots.length) return 'Turn on at least one filled slot';
+  const slots = state.slots[state.active] ? [state.active] : []; // the selected slot is the shape
+  if (!slots.length) return `Slot ${state.active + 1} is empty`;
   const gl = slots.map((i) => G(i, p.thickness, p.mode));
   if (gl.some((g) => !g)) return 'Loading shape…';
   const anim = p.anim ? p.animMode : '';
@@ -1167,15 +1167,22 @@ function buildSlots() {
     const el = document.createElement('div'); el.className = 'slot';
     el.innerHTML = `
       <button class="slot-thumb" type="button" id="slot-${i}" aria-pressed="${state.active === i}"><span class="slot-num">${i + 1}</span>${s ? '' : 'Empty'}</button>
-      <div class="slot-name"></div>
-      ${i < 2 ? '' : `<div class="slot-actions"><button type="button" data-a="upload">Upload</button><button type="button" data-a="paste">Paste</button>${s ? '<button type="button" data-a="clear">Clear</button>' : ''}</div>`}
-      <select id="slot-preset-${i}" aria-label="Load a preset into slot ${i + 1}"><option value="">Preset…</option>${Object.entries(PRESETS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('')}</select>`;
-    el.querySelector('.slot-name').textContent = s ? s.name : '—';
-    el.querySelector('.slot-thumb').addEventListener('click', () => { state.active = i; save(); document.querySelectorAll('.slot-thumb').forEach((b, k) => b.setAttribute('aria-pressed', String(k === i))); });
+      <select id="slot-preset-${i}" aria-label="Shape in slot ${i + 1}"></select>
+      ${i < 2 ? '' : `<div class="slot-actions"><button type="button" data-a="upload">Upload</button><button type="button" data-a="paste">Paste</button>${s ? '<button type="button" data-a="clear">Clear</button>' : ''}</div>`}`;
+    // The menu shows what's in the slot: a preset name, the uploaded file's name, or "Empty".
+    const sel = el.querySelector('select');
+    const match = s ? Object.keys(PRESETS).find((k) => PRESETS[k].svg === s.text) : null;
+    if (!s) sel.add(new Option('Empty', '', true, true)), (sel.options[0].disabled = true);
+    else if (!match) sel.add(new Option(s.name || 'Your SVG', '__custom', true, true));
+    for (const [k, v] of Object.entries(PRESETS)) sel.add(new Option(v.name, k, false, k === match));
+    el.querySelector('.slot-thumb').addEventListener('click', () => {
+      state.active = i; save(); requestRender();
+      document.querySelectorAll('.slot-thumb').forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
+    });
     el.querySelector('[data-a="upload"]')?.addEventListener('click', () => { state.active = i; $('fileIn').click(); });
     el.querySelector('[data-a="paste"]')?.addEventListener('click', () => openPaste(i));
     el.querySelector('[data-a="clear"]')?.addEventListener('click', () => { state.slots[i] = null; afterSlotChange(); });
-    el.querySelector('select').addEventListener('change', (e) => { const pr = PRESETS[e.target.value]; if (pr) setSlot(i, pr.svg, pr.name); });
+    sel.addEventListener('change', (e) => { const pr = PRESETS[e.target.value]; if (pr) setSlot(i, pr.svg, pr.name); });
     box.append(el);
     if (s) drawThumb(el.querySelector('.slot-thumb'), i);
   });
