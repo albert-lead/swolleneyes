@@ -481,7 +481,9 @@ function parseSvg(text, th, mode) {
       el.setAttribute('style', st);
     });
   }
-  const inner = root.innerHTML;
+  const PRES = ['fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'fill-rule', 'fill-opacity', 'stroke-opacity', 'opacity', 'color', 'style'];
+  const pres = PRES.filter((a) => root.hasAttribute(a)).map((a) => `${a}="${root.getAttribute(a).replace(/"/g, '&quot;')}"`).join(' ');
+  const inner = `<g${pres ? ' ' + pres : ''}>${root.innerHTML}</g>`;
   const k = 1024 / vmax;
   root.setAttribute('width', Math.round(vb[2] * k)); root.setAttribute('height', Math.round(vb[3] * k));
   root.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
@@ -562,11 +564,15 @@ function sprite(g, color, px) {
 
 // ---------------- Painters (canvas + SVG share one drawing API) ----------------
 // All tools draw in a 1000 x 1000 logical space.
-function canvasPainter(ctx, k) {
+function canvasPainter(ctx, k, transparent = false) {
   let count = 0;
   return {
     get count() { return count; },
-    rect(color) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.fillStyle = color; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); },
+    rect(color) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+      if (transparent) { ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); return; }
+      ctx.fillStyle = color; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    },
     poly(pts, fill, stroke, lw, alpha = 1) {
       ctx.setTransform(k, 0, 0, k, 0, 0); ctx.globalAlpha = alpha;
       ctx.beginPath(); ctx.moveTo(pts[0], pts[1]);
@@ -585,12 +591,34 @@ function canvasPainter(ctx, k) {
     },
   };
 }
+// Recolors an SVG fragment the way the canvas tint does: every painted fill and stroke becomes `color`.
+const SVGNS = 'http://www.w3.org/2000/svg';
+function recolorFragment(inner, color) {
+  const doc = new DOMParser().parseFromString(`<svg xmlns="${SVGNS}">${inner}</svg>`, 'image/svg+xml');
+  const root = doc.documentElement;
+  const eff = (el, prop, dflt) => {
+    for (let n = el; n && n !== root; n = n.parentNode) {
+      const m = (n.getAttribute('style') || '').match(new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*([^;!]+)'));
+      if (m) return m[1].trim();
+      if (n.hasAttribute(prop)) return n.getAttribute(prop).trim();
+    }
+    return dflt;
+  };
+  root.querySelectorAll(SHAPE_SEL).forEach((el) => {
+    const f = eff(el, 'fill', 'black'), st = eff(el, 'stroke', 'none');
+    let add = '';
+    if (f !== 'none' && f !== 'transparent') add += `;fill:${color}`;
+    if (st !== 'none' && st !== 'transparent') add += `;stroke:${color}`;
+    if (add) el.setAttribute('style', (el.getAttribute('style') || '') + add);
+  });
+  return root.innerHTML;
+}
 function svgPainter() {
-  const out = [], syms = new Map(), filters = new Map(); let count = 0, bg = null;
-  const r = (n) => +n.toFixed(2);
+  const out = [], defs = new Map(); let count = 0;
+  const r = (n) => +n.toFixed(2), q = (n) => +n.toFixed(4);
   return {
     get count() { return count; },
-    rect(color) { bg = color; },
+    rect() {}, // exports leave the background transparent
     poly(pts, fill, stroke, lw, alpha = 1) {
       let d = 'M' + r(pts[0]) + ' ' + r(pts[1]);
       for (let i = 2; i < pts.length; i += 2) d += 'L' + r(pts[i]) + ' ' + r(pts[i + 1]);
@@ -598,17 +626,18 @@ function svgPainter() {
       count++;
     },
     glyph(g, m, w, h, color, alpha = 1) {
-      if (!syms.has(g.key)) syms.set(g.key, { id: 's' + syms.size, g });
-      const id = syms.get(g.key).id;
-      let f = '';
-      if (color) { if (!filters.has(color)) filters.set(color, 'f' + filters.size); f = ` filter="url(#${filters.get(color)})"`; }
-      out.push(`<use href="#${id}" x="${r(-w / 2)}" y="${r(-h / 2)}" width="${r(w)}" height="${r(h)}" transform="matrix(${m.map((v) => +v.toFixed(4)).join(' ')})"${f}${alpha < 1 ? ` opacity="${r(alpha)}"` : ''}/>`);
+      const key = g.key + '|' + (color || '');
+      if (!defs.has(key)) defs.set(key, { id: 'g' + defs.size, body: color ? recolorFragment(g.inner, color) : g.inner });
+      // Map viewBox units straight to the page: no reliance on <use> width/height, which many apps ignore.
+      const [vx, vy, vw, vh] = g.vb, sx = w / vw, sy = h / vh;
+      const tx = -vx * sx - w / 2, ty = -vy * sy - h / 2;
+      const M = [m[0] * sx, m[1] * sx, m[2] * sy, m[3] * sy, m[0] * tx + m[2] * ty + m[4], m[1] * tx + m[3] * ty + m[5]];
+      out.push(`<use href="#${defs.get(key).id}" transform="matrix(${M.map(q).join(' ')})"${alpha < 1 ? ` opacity="${r(alpha)}"` : ''}/>`);
       count++;
     },
     finish() {
-      const defs = [...syms.values()].map(({ id, g }) => `<symbol id="${id}" viewBox="${g.vb.join(' ')}" preserveAspectRatio="xMidYMid meet" overflow="visible">${g.inner}</symbol>`)
-        .concat([...filters].map(([c, id]) => `<filter id="${id}" x="-10%" y="-10%" width="120%" height="120%"><feFlood flood-color="${c}"/><feComposite in2="SourceGraphic" operator="in"/></filter>`));
-      return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 1000" width="1000" height="1000">\n<defs>\n${defs.join('\n')}\n</defs>\n${bg ? `<rect width="1000" height="1000" fill="${bg}"/>\n` : ''}${out.join('\n')}\n</svg>`;
+      const d = [...defs.values()].map(({ id, body }) => `<g id="${id}">${body}</g>`);
+      return `<svg xmlns="${SVGNS}" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 1000" width="1000" height="1000">\n<defs>\n${d.join('\n')}\n</defs>\n${out.join('\n')}\n</svg>`;
     },
   };
 }
@@ -1174,16 +1203,21 @@ $('copySvg').addEventListener('click', () => {
     () => toast(`SVG copied (${sp.count.toLocaleString()} elements). Paste into Figma, Illustrator or a .svg file.`),
     () => { $('pasteBox').hidden = false; $('pasteTa').value = s; $('pasteTa').select(); $('pasteUse').textContent = 'Use in slot ' + (pasteTarget + 1); toast('Clipboard was blocked. The SVG is selected in the box under the slots; press Cmd/Ctrl+C.'); });
 });
+function exportCanvas(px) {
+  const c = document.createElement('canvas'); c.width = px; c.height = px;
+  DRAW[state.tab](canvasPainter(c.getContext('2d'), px / 1000, true), P(), palette(), time);
+  return c;
+}
 $('copyPng').addEventListener('click', () => {
-  render();
+  const c = exportCanvas(Math.max(1000, cv.width));
   try {
-    const item = new ClipboardItem({ 'image/png': new Promise((res) => cv.toBlob(res, 'image/png')) });
+    const item = new ClipboardItem({ 'image/png': new Promise((res) => c.toBlob(res, 'image/png')) });
     navigator.clipboard.write([item]).then(() => toast('PNG copied to the clipboard.'), () => toast('Clipboard was blocked. Right-click the pattern and choose Save Image instead.'));
   } catch (_) { toast('Clipboard was blocked. Right-click the pattern and choose Save Image instead.'); }
 });
 const stamp = () => new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
 function download(blob, ext) {
-  const name = `shape-studio-${state.tab}-${stamp()}.${ext}`;
+  const name = `texture-party-${state.tab}-${stamp()}.${ext}`;
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -1196,8 +1230,7 @@ $('dlSvg').addEventListener('click', () => {
 });
 $('dlPng').addEventListener('click', () => {
   const px = +$('pngSize').value;
-  const c = document.createElement('canvas'); c.width = px; c.height = px;
-  DRAW[state.tab](canvasPainter(c.getContext('2d'), px / 1000), P(), palette(), time);
+  const c = exportCanvas(px);
   c.toBlob((b) => {
     if (!b) { toast('PNG export failed. Try a smaller size.'); return; }
     toast(`Saved ${download(b, 'png')} (${px} × ${px} px).`);
