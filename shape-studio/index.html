@@ -1,0 +1,1169 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body { margin: 0; }</style>
+<title>Shape Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky square plotter bed on the left, instrument column on the right; tool tabs above; stacks on phones. */
+:root {
+  --bg: #f3f3f0;
+  --surface: #e9e9e4;
+  --ink: #1b1c1a;
+  --muted: #6c6e68;
+  --rule: #d2d3cc;
+  --accent: #2f5bd3;
+  --danger: #b23a2b;
+  --font-ui: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121312; --surface: #1c1d1c; --ink: #e4e4df; --muted: #8b8d86; --rule: #2c2e2b; --accent: #7d9cff; --danger: #f0806f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121312; --surface: #1c1d1c; --ink: #e4e4df; --muted: #8b8d86; --rule: #2c2e2b; --accent: #7d9cff; --danger: #f0806f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 14px;
+  padding: 0 clamp(16px, 4vw, 40px); padding-block: 0 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; }
+header.top {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding-block: 28px 0;
+}
+h1 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.sub { color: var(--muted); font-size: 13px; }
+nav.tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--rule); margin-top: 20px; overflow-x: auto; }
+nav.tabs button {
+  appearance: none; background: none; border: 0; font: inherit; font-size: 14px; color: var(--muted);
+  padding: 10px 0 12px; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; white-space: nowrap;
+}
+nav.tabs button:hover { color: var(--ink); }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 500; }
+
+main.grid {
+  display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: clamp(20px, 4vw, 56px);
+  padding-top: 28px; align-items: start;
+}
+@media (max-width: 860px) { main.grid { grid-template-columns: minmax(0, 1fr); } }
+.stage { min-width: 0; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+@media (max-width: 860px) { .stage { position: static; } }
+.bed { position: relative; width: 100%; max-width: 100%; aspect-ratio: 1 / 1; border: 1px solid var(--rule); }
+.bed canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.bed.drag { outline: 2px dashed var(--accent); outline-offset: -8px; }
+.drop-hint {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  font-family: var(--font-data); font-size: 12px; color: var(--accent); background: color-mix(in srgb, var(--bg) 80%, transparent);
+}
+.meta {
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px;
+  font-family: var(--font-data); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.actions { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+.toast { font-size: 12px; color: var(--accent); min-height: 1em; margin: 8px 0 0; }
+.about { margin-top: 20px; color: var(--muted); line-height: 1.6; max-width: 65ch; font-size: 13px; }
+
+.panel { min-width: 0; display: flex; flex-direction: column; gap: 30px; }
+.section { display: flex; flex-direction: column; gap: 14px; }
+.section h2 { margin: 0; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.section h2 small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
+
+/* Slots */
+.slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.slot { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.slot-thumb {
+  appearance: none; border: 1px solid var(--rule); background: transparent; aspect-ratio: 1 / 1; width: 100%;
+  padding: 12px; cursor: pointer; display: grid; place-items: center; position: relative; color: var(--muted); font: inherit; font-size: 11px;
+}
+.slot-thumb:hover { border-color: var(--muted); }
+.slot-thumb[aria-pressed="true"] { border-color: var(--ink); background: var(--surface); }
+.slot-thumb canvas { width: 100%; height: 100%; display: block; }
+.slot-num { position: absolute; top: 5px; left: 7px; font-family: var(--font-data); font-size: 10px; color: var(--muted); }
+.slot-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-actions { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; }
+.slot-actions button { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.slot-actions button:hover { color: var(--ink); }
+.slot select { width: 100%; font-size: 12px; padding: 4px 6px; }
+.pastebox textarea { width: 100%; font-family: var(--font-data); font-size: 11px; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); padding: 8px; }
+
+.btn { appearance: none; font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); padding: 7px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.linkbtn { appearance: none; background: none; border: 0; padding: 0 0 3px; font: inherit; font-size: 13px; color: var(--ink); border-bottom: 1px solid var(--ink); cursor: pointer; }
+.linkbtn:hover { color: var(--accent); border-color: var(--accent); }
+.hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0; }
+.err { font-size: 12px; color: var(--danger); margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Controls */
+.ctl { display: grid; grid-template-columns: minmax(0, 1fr) 64px; column-gap: 14px; row-gap: 6px; }
+.ctl label { grid-column: 1 / -1; font-size: 13px; font-weight: 500; display: flex; justify-content: space-between; gap: 8px; }
+.ctl output { font-family: var(--font-data); font-size: 11px; color: var(--muted); text-align: right; align-self: center; font-variant-numeric: tabular-nums; }
+.ctl.dbl { cursor: default; }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 1px; background: var(--muted); }
+input[type="range"]::-moz-range-track { height: 1px; background: var(--muted); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--ink); margin-top: -7px; }
+input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--ink); }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row > .lbl { font-size: 13px; font-weight: 500; min-width: 96px; }
+select { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); padding: 6px 8px; }
+input[type="number"] { font-family: var(--font-data); font-size: 12px; width: 90px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); padding: 6px 8px; }
+input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid var(--rule); background: var(--surface); cursor: pointer; }
+.toggle { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
+.toggle input { accent-color: var(--ink); width: 15px; height: 15px; margin: 0; }
+.chips { display: flex; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; border: 1px solid var(--rule); padding: 5px 9px; cursor: pointer; }
+.chip input { accent-color: var(--ink); margin: 0; }
+.tag3d { font-family: var(--font-data); font-size: 9px; letter-spacing: 0.06em; border: 1px solid var(--rule); padding: 1px 5px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Shape Studio</h1>
+    <span class="sub">Textures, isometric fields and cube grids built from your own SVGs</span>
+  </header>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="texture" id="tab-texture">Texture</button>
+    <button role="tab" data-tab="extrude" id="tab-extrude">Iso Extrude</button>
+    <button role="tab" data-tab="iso" id="tab-iso" hidden>Isometric Field</button>
+    <button role="tab" data-tab="cubes" id="tab-cubes" hidden>Cube Grid</button>
+    <button role="tab" data-tab="flow" id="tab-flow">Flow Field</button>
+  </nav>
+
+  <main class="grid">
+    <section class="stage">
+      <div class="bed" id="bed">
+        <canvas id="cv" aria-label="Generated pattern"></canvas>
+        <div class="drop-hint" id="dropHint" hidden>Drop SVG into the selected slot</div>
+      </div>
+      <div class="meta"><span id="stats">–</span><span id="renderMs"></span></div>
+      <div class="actions">
+        <button class="linkbtn" id="copySvg" type="button">Copy as SVG</button>
+        <button class="linkbtn" id="copyPng" type="button">Copy as PNG</button>
+        <button class="linkbtn" id="resetTab" type="button">Reset this tool</button>
+      </div>
+      <p class="toast" id="toast" aria-live="polite"></p>
+      <p class="about" id="about"></p>
+    </section>
+
+    <aside class="panel">
+      <div class="section">
+        <h2>Shape slots <small>click a slot to make it the drop and paste target</small></h2>
+        <div class="slots" id="slots"></div>
+        <div class="pastebox" id="pasteBox" hidden>
+          <textarea id="pasteTa" rows="5" placeholder="&lt;svg viewBox=&quot;0 0 100 100&quot;&gt;…&lt;/svg&gt;"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="btn" id="pasteUse" type="button">Use in slot 1</button>
+            <button class="btn" id="pasteCancel" type="button">Cancel</button>
+          </div>
+        </div>
+        <p class="err" id="err" hidden></p>
+        <input type="file" id="fileIn" accept=".svg,image/svg+xml" hidden>
+      </div>
+
+      <div id="controls" class="panel" style="gap:30px"></div>
+
+      <div class="section">
+        <h2>Colors</h2>
+        <label class="toggle"><input type="checkbox" id="c-page"> Use page colors</label>
+        <div class="row" id="c-custom">
+          <span class="lbl">Paper</span><input type="color" id="c-paper" aria-label="Paper color">
+          <span class="lbl" style="min-width:auto">Ink</span><input type="color" id="c-ink" aria-label="Ink color">
+        </div>
+        <label class="toggle"><input type="checkbox" id="c-per"> Give each slot its own color</label>
+        <div class="row" id="c-perRow">
+          <span class="lbl">Slot 2</span><input type="color" id="c-s2" aria-label="Slot 2 color">
+          <span class="lbl" style="min-width:auto">Slot 3</span><input type="color" id="c-s3" aria-label="Slot 3 color">
+        </div>
+        <label class="toggle"><input type="checkbox" id="c-keep"> Keep each SVG's own colors</label>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const TAU = Math.PI * 2, D2R = Math.PI / 180;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fract = (v) => v - Math.floor(v);
+
+// ---------------- Presets ----------------
+const starPath = (() => { let d = ''; for (let i = 0; i < 10; i++) { const r = i % 2 ? 19 : 46, a = -Math.PI / 2 + i * Math.PI / 5; d += (i ? 'L' : 'M') + (50 + r * Math.cos(a)).toFixed(1) + ' ' + (52 + r * Math.sin(a)).toFixed(1); } return d + 'Z'; })();
+const PRESETS = {
+  leaf:    { name: 'Leaf',    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40"><path d="M2 20C26 -2 74 -2 98 20C74 42 26 42 2 20Z" fill="#000"/></svg>' },
+  ring:    { name: 'Ring',    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#000" stroke-width="10"/></svg>' },
+  cross:   { name: 'Cross',   svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 10V90M10 50H90" stroke="#000" stroke-width="12" stroke-linecap="round"/></svg>' },
+  line:    { name: 'Line',    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 10"><line x1="5" y1="5" x2="95" y2="5" stroke="#000" stroke-width="5.5" stroke-linecap="round"/></svg>' },
+  arrow:   { name: 'Arrow',   svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40"><path d="M4 20H92M74 6L94 20L74 34" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
+  wedge:   { name: 'Wedge',   svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><path d="M2 4L98 30L2 56Z" fill="#000"/></svg>' },
+  chevron: { name: 'Chevron', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><path d="M8 8L50 50L92 8" fill="none" stroke="#000" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
+  square:  { name: 'Square',  svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" fill="#000"/></svg>' },
+  dot:     { name: 'Dot',     svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#000"/></svg>' },
+  star:    { name: 'Star',    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="${starPath}" fill="#000"/></svg>` },
+};
+
+// ---------------- Tool schemas ----------------
+const MODE = { k: 'mode', t: 'select', label: 'Line Style', def: 'original', opts: [['original', 'As drawn'], ['outline', 'Outline only'], ['bold', 'Bold (thicken fills)']] };
+const THICK = { k: 'thickness', t: 'range', label: 'Line Thickness', min: 0, max: 20, step: 0.25, def: 0, fmt: (v) => v == 0 ? 'SVG' : (+v).toFixed(2) + '%' };
+const ANIM = [{ k: 'anim', t: 'check', label: 'Animate', def: false }, { k: 'speed', t: 'range', label: 'Speed', min: 0.01, max: 1, step: 0.01, def: 0.2, when: (p) => p.anim }];
+
+const SCHEMA = {
+  texture: [
+    { group: 'Shapes' },
+    { k: 'use', t: 'slots', label: 'Slots in pattern', def: [true, true, false] },
+    { k: 'order', t: 'select', label: 'Arrangement', def: 'checker', opts: [['checker', 'Checkerboard'], ['sequence', 'Sequence'], ['row', 'By row'], ['col', 'By column'], ['random', 'Random']] },
+    { k: 'size', t: 'range', label: 'Shape Size', min: 5, max: 250, step: 1, def: 62, fmt: (v) => v + '%' },
+    THICK, MODE,
+    { group: 'Grid' },
+    { k: 'spacing', t: 'range', label: 'Distance Between Shapes', min: 12, max: 240, step: 1, def: 64, fmt: (v) => v + ' u' },
+    { k: 'rowOffset', t: 'range', label: 'Row Offset', min: 0, max: 100, step: 1, def: 50, fmt: (v) => v + '%' },
+    { k: 'colOffset', t: 'range', label: 'Column Offset', min: 0, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { t: 'hint', text: 'Offsets shift each row (or column) by a share of the spacing. 50% makes a brick layout; other values make diagonals.' },
+    { k: 'rot', t: 'range', label: 'Rotation', min: 0, max: 360, step: 1, def: 0, fmt: (v) => v + '°' },
+    { k: 'rotRow', t: 'range', label: 'Rotation per Row', min: -90, max: 90, step: 0.5, def: 0, fmt: (v) => v + '°' },
+    { k: 'rotCol', t: 'range', label: 'Rotation per Column', min: -90, max: 90, step: 0.5, def: 12, fmt: (v) => v + '°' },
+    { group: 'Ramps' },
+    { k: 'rampDir', t: 'select', label: 'Ramp Direction', def: 'horizontal', opts: [['horizontal', 'Left to right'], ['vertical', 'Top to bottom'], ['diagonal', 'Diagonal'], ['radial', 'From center']] },
+    { k: 'sizeRamp', t: 'range', label: 'Size Ramp', min: -100, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'scaleRamp', t: 'range', label: 'Scale Ramp', min: -100, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { t: 'hint', text: 'Size Ramp grows the shapes along the ramp while the grid stays even. Scale Ramp squeezes the whole grid toward one side, so spacing and size change together like a zoom.' },
+    { group: 'Depth', tag: '3D' },
+    { k: 'tilt', t: 'range', label: 'Perspective Tilt', min: 0, max: 75, step: 0.5, def: 0, fmt: (v) => v + '°' },
+    { k: 'waveAmp', t: 'range', label: 'Wave Height', min: 0, max: 300, step: 1, def: 0, fmt: (v) => v + ' u' },
+    { k: 'waveFreq', t: 'range', label: 'Wave Frequency', min: 0.25, max: 10, step: 0.05, def: 2, when: (p) => p.waveAmp > 0 },
+    { k: 'bulge', t: 'range', label: 'Sphere Bulge', min: -100, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'twist', t: 'range', label: 'Vortex Twist', min: -360, max: 360, step: 1, def: 0, fmt: (v) => v + '°' },
+    { k: 'extrude', t: 'range', label: 'Extrude Depth', min: 0, max: 60, step: 0.5, def: 0, fmt: (v) => v + ' u' },
+    { k: 'extrudeAngle', t: 'range', label: 'Extrude Angle', min: 0, max: 360, step: 1, def: 135, fmt: (v) => v + '°', when: (p) => p.extrude > 0 },
+    { k: 'fog', t: 'range', label: 'Depth Fog', min: 0, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { t: 'hint', text: 'Tilt lays the texture on a receding floor. Wave Height lifts it into ripples (visible with tilt, or as pulsing size without). Extrude stacks shaded copies behind each shape. Fog fades the far side.' },
+    { group: 'Motion' }, ...ANIM,
+    { k: 'seed', t: 'seed', label: 'Seed', def: 7, when: (p) => p.order === 'random' },
+  ],
+  iso: [
+    { group: 'Source' },
+    { k: 'source', t: 'select', label: 'Height Source', def: 'noise', opts: [['noise', 'Noise terrain'], ['mask', 'SVG shape, extruded'], ['dome', 'SVG shape, domed'], ['maskNoise', 'SVG shape × noise']] },
+    { k: 'maskSlot', t: 'slot', label: 'Shape slot', def: 1, noNone: true, when: (p) => p.source !== 'noise' },
+    { k: 'maskDepth', t: 'range', label: 'Dome Width', min: 1, max: 16, step: 0.5, def: 4, fmt: (v) => v + ' blocks', when: (p) => p.source === 'dome' },
+    { k: 'outside', t: 'select', label: 'Outside shape', def: 'hide', opts: [['hide', 'Empty'], ['floor', 'Flat floor'], ['noise', 'Low noise terrain']], when: (p) => p.source !== 'noise' },
+    { k: 'invert', t: 'check', label: 'Invert shape', def: false, when: (p) => p.source !== 'noise' },
+    { t: 'hint', text: 'The slot is rasterized onto the grid: each block inside the shape becomes a column. Raise Grid Dimension for a sharper silhouette.', when: (p) => p.source !== 'noise' },
+    { group: 'Terrain' },
+    { k: 'grid', t: 'range', label: 'Grid Dimension', min: 4, max: 44, step: 1, def: 20 },
+    { k: 'cube', t: 'range', label: 'Block Size', min: 20, max: 100, step: 1, def: 100, fmt: (v) => v + '%' },
+    { k: 'noiseScale', t: 'range', label: 'Noise Scale', min: 3, max: 100, step: 0.5, def: 30 },
+    { k: 'octaves', t: 'range', label: 'Detail (octaves)', min: 1, max: 5, step: 1, def: 2 },
+    { k: 'height', t: 'range', label: 'Height Factor', min: 0, max: 3, step: 0.01, def: 1 },
+    { k: 'steps', t: 'range', label: 'Terrace Steps', min: 0, max: 24, step: 1, def: 0, fmt: (v) => v == 0 ? 'smooth' : v },
+    { k: 'floor', t: 'range', label: 'Water Level', min: 0, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'style', t: 'select', label: 'Style', def: 'solid', opts: [['solid', 'Solid shaded'], ['stacked', 'Stacked cubes'], ['outline', 'Outline'], ['tiles', 'Floating tiles'], ['silhouette', 'Ink silhouette']] },
+    { k: 'seed', t: 'seed', label: 'Seed', def: 11 },
+    { group: 'Decal' },
+    { k: 'decal', t: 'slot', label: 'SVG on faces', def: 0 },
+    { k: 'decalFaces', t: 'select', label: 'Faces', def: 'top', opts: [['top', 'Top only'], ['all', 'All visible faces']], when: (p) => p.decal > 0 },
+    { k: 'decalSize', t: 'range', label: 'Decal Size', min: 10, max: 140, step: 1, def: 70, fmt: (v) => v + '%', when: (p) => p.decal > 0 },
+    { ...THICK, when: (p) => p.decal > 0 }, { ...MODE, when: (p) => p.decal > 0 },
+    { group: 'Motion' }, ...ANIM,
+  ],
+  cubes: [
+    { group: 'Block' },
+    { k: 'grid', t: 'range', label: 'Grid Dimension', min: 2, max: 32, step: 1, def: 12 },
+    { k: 'layers', t: 'range', label: 'Layers', min: 1, max: 18, step: 1, def: 12 },
+    { k: 'gap', t: 'range', label: 'Gap', min: 0, max: 70, step: 1, def: 8, fmt: (v) => v + '%' },
+    { k: 'fill', t: 'select', label: 'Fill Method', def: 'random', opts: [['random', 'Random'], ['perlin', 'Perlin noise'], ['all', 'Solid block'], ['svg', 'SVG voxels']] },
+    { k: 'maskSlot', t: 'slot', label: 'Shape slot', def: 1, noNone: true, when: (p) => p.fill === 'svg' },
+    { k: 'orient', t: 'select', label: 'Orientation', def: 'floor', opts: [['floor', 'Lying flat'], ['left', 'Standing, facing left'], ['right', 'Standing, facing right']], when: (p) => p.fill === 'svg' },
+    { t: 'hint', text: 'Your SVG becomes a Grid Dimension × Grid Dimension pixel grid, extruded Layers deep. Set Density to 1 for a solid extrusion, or lower it to scatter the voxels.', when: (p) => p.fill === 'svg' },
+    { k: 'density', t: 'range', label: 'Density', min: 0, max: 1, step: 0.01, def: 0.75, when: (p) => p.fill !== 'all' },
+    { k: 'noiseScale', t: 'range', label: 'Noise Scale', min: 2, max: 60, step: 0.5, def: 8, when: (p) => p.fill === 'perlin' || p.disp > 0 },
+    { k: 'disp', t: 'range', label: 'Explode', min: 0, max: 3, step: 0.01, def: 0 },
+    { k: 'lift', t: 'range', label: 'Layer Lift', min: 0, max: 200, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'style', t: 'select', label: 'Style', def: 'solid', opts: [['solid', 'Solid shaded'], ['outline', 'Outline'], ['wire', 'Wireframe (see-through)'], ['silhouette', 'Ink silhouette']] },
+    { k: 'seed', t: 'seed', label: 'Seed', def: 337 },
+    { group: 'Decal' },
+    { k: 'decal', t: 'slot', label: 'SVG on faces', def: 0 },
+    { k: 'decalFaces', t: 'select', label: 'Faces', def: 'all', opts: [['top', 'Top only'], ['all', 'All visible faces']], when: (p) => p.decal > 0 },
+    { k: 'decalSize', t: 'range', label: 'Decal Size', min: 10, max: 140, step: 1, def: 70, fmt: (v) => v + '%', when: (p) => p.decal > 0 },
+    { ...THICK, when: (p) => p.decal > 0 }, { ...MODE, when: (p) => p.decal > 0 },
+    { group: 'Motion' }, { ...ANIM[0], label: 'Animate (Perlin and Explode drift)' }, ANIM[1],
+  ],
+  extrude: [
+    { group: 'Shapes' },
+    { k: 'use', t: 'slots', label: 'Slots used', def: [true, true, false] },
+    { k: 'order', t: 'select', label: 'Arrangement', def: 'checker', opts: [['checker', 'Checkerboard'], ['sequence', 'Sequence'], ['row', 'By row'], ['col', 'By column'], ['random', 'Random']] },
+    { k: 'size', t: 'range', label: 'Shape Size', min: 10, max: 250, step: 1, def: 85, fmt: (v) => v + '%' },
+    THICK, MODE,
+    { group: 'Grid' },
+    { k: 'plane', t: 'select', label: 'Base Plane', def: 'floor', opts: [['floor', 'Floor'], ['left', 'Left wall'], ['right', 'Right wall']] },
+    { k: 'cols', t: 'range', label: 'Columns', min: 1, max: 16, step: 1, def: 4 },
+    { k: 'rows', t: 'range', label: 'Rows', min: 1, max: 16, step: 1, def: 4 },
+    { k: 'spacing', t: 'range', label: 'Distance Between Shapes', min: 30, max: 300, step: 1, def: 120, fmt: (v) => v + '%' },
+    { k: 'rowOffset', t: 'range', label: 'Row Offset', min: 0, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'colOffset', t: 'range', label: 'Column Offset', min: 0, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'rot', t: 'range', label: 'Rotation in Plane', min: 0, max: 360, step: 1, def: 0, fmt: (v) => v + '°' },
+    { k: 'rotRow', t: 'range', label: 'Rotation per Row', min: -90, max: 90, step: 0.5, def: 0, fmt: (v) => v + '°' },
+    { k: 'rotCol', t: 'range', label: 'Rotation per Column', min: -90, max: 90, step: 0.5, def: 0, fmt: (v) => v + '°' },
+    { group: 'Ramps' },
+    { k: 'rampDir', t: 'select', label: 'Ramp Direction', def: 'horizontal', opts: [['horizontal', 'Across columns'], ['vertical', 'Across rows'], ['diagonal', 'Diagonal'], ['radial', 'From center']] },
+    { k: 'sizeRamp', t: 'range', label: 'Size Ramp', min: -100, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'scaleRamp', t: 'range', label: 'Scale Ramp', min: -100, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'depthRamp', t: 'range', label: 'Depth Ramp', min: -100, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'tiltRamp', t: 'range', label: 'Tilt Ramp', min: -180, max: 180, step: 1, def: 0, fmt: (v) => v + '°' },
+    { t: 'hint', text: 'Size Ramp grows the shapes along the ramp. Scale Ramp squeezes the grid so spacing and size change together. Depth Ramp changes extrusion depth, and Tilt Ramp flips the shapes progressively.' },
+    { group: 'Shape Rotation', tag: '3D' },
+    { k: 'tiltX', t: 'range', label: 'Tilt X', min: -180, max: 180, step: 1, def: 0, fmt: (v) => v + '°' },
+    { k: 'tiltY', t: 'range', label: 'Tilt Y', min: -180, max: 180, step: 1, def: 0, fmt: (v) => v + '°' },
+    { k: 'tiltRow', t: 'range', label: 'Tilt per Row', min: -90, max: 90, step: 0.5, def: 0, fmt: (v) => v + '°' },
+    { k: 'tiltCol', t: 'range', label: 'Tilt per Column', min: -90, max: 90, step: 0.5, def: 0, fmt: (v) => v + '°' },
+    { k: 'waveAmp', t: 'range', label: 'Wave Height', min: 0, max: 300, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'waveFreq', t: 'range', label: 'Wave Frequency', min: 0.1, max: 4, step: 0.05, def: 1, when: (p) => p.waveAmp > 0 },
+    { t: 'hint', text: 'Tilts spin each shape around its own axes, like cards turning in place. Wave lifts shapes off the base plane in a ripple.' },
+    { group: 'Extrusion', tag: '3D' },
+    { k: 'depth', t: 'range', label: 'Extrude Depth', min: 0, max: 300, step: 1, def: 30, fmt: (v) => v + '%' },
+    { k: 'depthNoise', t: 'range', label: 'Depth Variation', min: 0, max: 100, step: 1, def: 0, fmt: (v) => v + '%' },
+    { k: 'taper', t: 'range', label: 'Taper', min: 0, max: 200, step: 1, def: 100, fmt: (v) => v + '%' },
+    { k: 'twist', t: 'range', label: 'Twist Along Depth', min: -360, max: 360, step: 1, def: 0, fmt: (v) => v + '°' },
+    { k: 'tone', t: 'range', label: 'Side Shade', min: 0, max: 100, step: 1, def: 55, fmt: (v) => v + '%' },
+    { k: 'light', t: 'range', label: 'Lighting', min: 0, max: 100, step: 1, def: 40, fmt: (v) => v + '%' },
+    { t: 'hint', text: 'Taper shrinks (or grows) the shape toward the top for bevels and pyramids. Twist rotates each layer, so the extrusion corkscrews.' },
+    { group: 'Camera', tag: '3D' },
+    { k: 'yaw', t: 'range', label: 'Yaw', min: -180, max: 180, step: 0.5, def: 45, fmt: (v) => v + '°' },
+    { k: 'pitch', t: 'range', label: 'Pitch', min: -90, max: 90, step: 0.1, def: 35.3, fmt: (v) => (+v).toFixed(1) + '°' },
+    { k: 'roll', t: 'range', label: 'Roll', min: -180, max: 180, step: 0.5, def: 0, fmt: (v) => v + '°' },
+    { k: 'persp', t: 'range', label: 'Perspective', min: 0, max: 100, step: 1, def: 0, fmt: (v) => v == 0 ? 'iso' : v + '%' },
+    { k: 'zoom', t: 'range', label: 'Zoom', min: 30, max: 250, step: 1, def: 100, fmt: (v) => v + '%' },
+    { t: 'hint', text: 'Yaw 45° and Pitch 35.3° with no perspective is true isometric. Double-click any slider to reset it.' },
+    { group: 'Motion' },
+    { k: 'anim', t: 'check', label: 'Animate', def: false },
+    { k: 'animMode', t: 'select', label: 'Motion', def: 'spin', opts: [['spin', 'Spin camera'], ['tilt', 'Flip shapes'], ['wave', 'Travel wave'], ['depth', 'Breathe depth']], when: (p) => p.anim },
+    { k: 'speed', t: 'range', label: 'Speed', min: 0.01, max: 1, step: 0.01, def: 0.2, when: (p) => p.anim },
+    { k: 'seed', t: 'seed', label: 'Seed', def: 5, when: (p) => p.order === 'random' || p.depthNoise > 0 },
+  ],
+  flow: [
+    { group: 'Shape' },
+    { k: 'slot', t: 'slot', label: 'Slot', def: 1, noNone: true },
+    { k: 'size', t: 'range', label: 'Shape Size', min: 5, max: 200, step: 0.5, def: 80, fmt: (v) => Math.round(v) + '%' },
+    THICK, MODE,
+    { group: 'Field' },
+    { k: 'grid', t: 'range', label: 'Grid Size', min: 3, max: 60, step: 1, def: 11 },
+    { k: 'flow', t: 'range', label: 'Flow Scale', min: 1, max: 100, step: 0.1, def: 34.8 },
+    { k: 'turb', t: 'range', label: 'Turbulence', min: 0, max: 4, step: 0.05, def: 2 },
+    { k: 'rot', t: 'range', label: 'Rotation Offset', min: 0, max: 360, step: 1, def: 0, fmt: (v) => v + '°' },
+    { k: 'mirror', t: 'check', label: 'Mirror left and right', def: true },
+    { k: 'seed', t: 'seed', label: 'Seed', def: 1729 },
+    { group: 'Motion' }, ...ANIM,
+  ],
+};
+const ABOUT = {
+  texture: 'Your slot shapes are placed on an even grid, then warped. Ramps change size and spacing across the sheet, rotation steps add per row and column, and the Depth group pushes the flat sheet into perspective, ripples, bulges and extrusions.',
+  iso: 'A grid of blocks seen in isometric projection. Perlin noise sets the height of each block, which reads as terrain while keeping the flat look of an axonometric drawing. Add an SVG to print it on each top face.',
+  cubes: 'A three-dimensional grid of isometric cubes where each position is filled at random or by 3D Perlin noise. Explode pushes cubes outward from the center by a noise-varied amount; Layer Lift separates the layers vertically.',
+  extrude: 'Your SVGs kept exactly as drawn, placed on a grid in 3D space and extruded into solids. The camera starts in true isometric; yaw, pitch, roll and perspective move it freely. Per-shape tilts, ramps, taper and twist work like the Texture tool, in depth.',
+  flow: 'Perlin noise sampled at each grid position becomes an angle, and every cell draws the chosen slot shape at that angle. Neighbouring cells turn together, so streams and eddies appear.',
+};
+const defaultsFor = (tab) => Object.fromEntries(SCHEMA[tab].filter((s) => s.k).map((s) => [s.k, Array.isArray(s.def) ? [...s.def] : s.def]));
+
+// ---------------- State ----------------
+const STORE = 'shape-studio-v1';
+const HIDDEN_TABS = new Set(['iso', 'cubes']); // kept in code, hidden from the tab bar
+const tabOk = (t) => !!SCHEMA[t] && !HIDDEN_TABS.has(t);
+let state = {
+  tab: 'texture', active: 0,
+  slots: [{ name: 'Leaf', text: PRESETS.leaf.svg, v: 1 }, { name: 'Ring', text: PRESETS.ring.svg, v: 1 }, { name: 'Cross', text: PRESETS.cross.svg, v: 1 }],
+  colors: { page: true, paper: '#f3f3f0', ink: '#1b1c1a', per: false, s2: '#2f5bd3', s3: '#c0582e', keep: false },
+  p: Object.fromEntries(Object.keys(SCHEMA).map((t) => [t, defaultsFor(t)])),
+};
+function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (_) {} }
+function restore() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE) || 'null'); if (!d) return;
+    state.tab = tabOk(d.tab) ? d.tab : state.tab;
+    state.active = d.active | 0;
+    if (Array.isArray(d.slots) && d.slots.length === 3) state.slots = d.slots.map((s) => (s && s.text ? { name: s.name, text: s.text, v: s.v || 1 } : null));
+    if (d.colors) state.colors = { ...state.colors, ...d.colors };
+    for (const t of Object.keys(SCHEMA)) state.p[t] = { ...defaultsFor(t), ...(d.p && d.p[t]) };
+  } catch (_) {}
+}
+const P = () => state.p[state.tab];
+
+// ---------------- Noise ----------------
+const perm = new Uint8Array(512);
+let permSeed = -1;
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let r = Math.imul(a ^ a >>> 15, 1 | a); r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r; return ((r ^ r >>> 14) >>> 0) / 4294967296; }; }
+function seedNoise(seed) {
+  if (seed === permSeed) return; permSeed = seed;
+  const rnd = mulberry32(seed), p = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) p[i] = i;
+  for (let i = 255; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = p[i]; p[i] = p[j]; p[j] = t; }
+  for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+}
+const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+const lerp = (a, b, t) => a + (b - a) * t;
+function g3(h, x, y, z) { const k = h & 15, u = k < 8 ? x : y, v = k < 4 ? y : (k === 12 || k === 14 ? x : z); return ((k & 1) ? -u : u) + ((k & 2) ? -v : v); }
+function noise3(x, y, z) {
+  const X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255;
+  x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
+  const u = fade(x), v = fade(y), w = fade(z), p = perm;
+  const A = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z, B = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
+  return lerp(
+    lerp(lerp(g3(p[AA], x, y, z), g3(p[BA], x - 1, y, z), u), lerp(g3(p[AB], x, y - 1, z), g3(p[BB], x - 1, y - 1, z), u), v),
+    lerp(lerp(g3(p[AA + 1], x, y, z - 1), g3(p[BA + 1], x - 1, y, z - 1), u), lerp(g3(p[AB + 1], x, y - 1, z - 1), g3(p[BB + 1], x - 1, y - 1, z - 1), u), v), w);
+}
+function hash3(i, j, k, s) {
+  let h = Math.imul(i, 374761393) ^ Math.imul(j, 668265263) ^ Math.imul(k, 2147483587) ^ Math.imul(s, 144665);
+  h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+// ---------------- Colors ----------------
+const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function hex2rgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map((c) => c + c).join(''); const n = parseInt(h, 16) || 0; return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function mix(a, b, t) { const A = hex2rgb(a), B = hex2rgb(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
+function palette() {
+  const c = state.colors;
+  const paper = c.page ? cssVar('--bg') : c.paper, ink = c.page ? cssVar('--ink') : c.ink;
+  const slot = c.keep ? [null, null, null] : c.per ? [ink, c.s2, c.s3] : [ink, ink, ink];
+  return { paper, ink, slot };
+}
+
+// ---------------- Glyphs (parsed SVGs) ----------------
+const glyphs = new Map();
+let pendingLoads = 0;
+const SHAPE_SEL = 'path,line,polyline,polygon,rect,circle,ellipse,text,use';
+function parseSvg(text, th, mode) {
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  const root = doc.documentElement;
+  if (doc.querySelector('parsererror') || !root || root.nodeName.toLowerCase() !== 'svg') throw new Error('That is not valid SVG. Check that it starts with an <svg> element.');
+  root.querySelectorAll('script, foreignObject').forEach((n) => n.remove());
+  root.querySelectorAll('*').forEach((n) => { for (const a of [...n.attributes]) if (/^on/i.test(a.name)) n.removeAttribute(a.name); });
+  let vb = (root.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number);
+  if (vb.length !== 4 || vb.some((n) => !isFinite(n)) || vb[2] <= 0 || vb[3] <= 0) {
+    vb = [0, 0, parseFloat(root.getAttribute('width')) || 100, parseFloat(root.getAttribute('height')) || 100];
+    root.setAttribute('viewBox', vb.join(' '));
+  }
+  const vmax = Math.max(vb[2], vb[3]);
+  const sw = (th > 0 ? th : (mode !== 'original' ? 3 : 0)) / 100 * vmax;
+  if (sw > 0 || mode !== 'original') {
+    root.querySelectorAll(SHAPE_SEL).forEach((el) => {
+      let st = el.getAttribute('style') || '';
+      if (mode === 'outline') st += ';fill:none!important;stroke:#000!important;stroke-linejoin:round!important;stroke-linecap:round!important';
+      if (mode === 'bold') st += ';stroke:#000!important;stroke-linejoin:round!important;stroke-linecap:round!important';
+      if (sw > 0) st += `;stroke-width:${sw.toFixed(3)}px!important`;
+      el.setAttribute('style', st);
+    });
+  }
+  const inner = root.innerHTML;
+  const k = 1024 / vmax;
+  root.setAttribute('width', Math.round(vb[2] * k)); root.setAttribute('height', Math.round(vb[3] * k));
+  root.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  root.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  root.setAttribute('overflow', 'visible');
+  return { serial: new XMLSerializer().serializeToString(root), vb, inner };
+}
+function loadImage(serial) {
+  return new Promise((res, rej) => { const img = new Image(); img.onload = () => res(img); img.onerror = () => rej(new Error('The browser could not draw this SVG. Try exporting it as plain SVG with outlined text.')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(serial); });
+}
+function glyphKey(i, th, mode) { const s = state.slots[i]; return s ? `${i}|${s.v}|${th}|${mode}` : null; }
+// Returns a ready glyph or null (and starts loading it).
+function G(i, th = 0, mode = 'original') {
+  const key = glyphKey(i, th, mode); if (!key) return null;
+  const g = glyphs.get(key);
+  if (g) return g.ready ? g : null;
+  const entry = { ready: false, key }; glyphs.set(key, entry);
+  let parsed;
+  try { parsed = parseSvg(state.slots[i].text, th, mode); } catch (e) { entry.error = e.message; return null; }
+  pendingLoads++;
+  loadImage(parsed.serial).then((img) => {
+    Object.assign(entry, { ready: true, img, w: parsed.vb[2], h: parsed.vb[3], vb: parsed.vb, inner: parsed.inner, levels: {}, tints: {}, ntint: 0 });
+  }).catch((e) => { entry.error = e.message; }).finally(() => { pendingLoads--; requestRender(); if (th === 0 && mode === 'original') setTimeout(refreshThumbs, 0); });
+  return null;
+}
+const fitDims = (g, size) => { const m = Math.max(g.w, g.h); return [size * g.w / m, size * g.h / m]; };
+
+// Rasterizes a slot into a cols x rows on/off grid, plus each cell's distance to the shape's edge.
+const maskCache = new Map();
+function getMask(si, cols, rows, invert = false) {
+  const g = G(si); if (!g) return null;
+  const key = `${g.key}|${cols}|${rows}|${invert}`;
+  if (maskCache.has(key)) return maskCache.get(key);
+  const c = document.createElement('canvas'); c.width = cols; c.height = rows;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingQuality = 'high';
+  const s = Math.min(cols / g.w, rows / g.h), w = g.w * s, h = g.h * s;
+  let b = 16; while (b < Math.max(w, h) * 2 && b < 1024) b *= 2;
+  x.drawImage(level(g, b), (cols - w) / 2, (rows - h) / 2, w, h);
+  const a = x.getImageData(0, 0, cols, rows).data, n = cols * rows;
+  const m = new Uint8Array(n), d = new Float32Array(n);
+  for (let i = 0; i < n; i++) { m[i] = (a[i * 4 + 3] > 110) !== invert ? 1 : 0; d[i] = m[i] ? 1e9 : 0; }
+  const at = (xx, yy) => (xx < 0 || yy < 0 || xx >= cols || yy >= rows) ? 0 : d[yy * cols + xx];
+  const pass = (fwd) => {
+    for (let k = 0; k < n; k++) {
+      const i = fwd ? k : n - 1 - k; if (!m[i]) continue;
+      const xx = i % cols, yy = (i / cols) | 0, s1 = fwd ? -1 : 1;
+      d[i] = Math.min(d[i], at(xx + s1, yy) + 1, at(xx, yy + s1) + 1, at(xx - 1, yy + s1) + 1.414, at(xx + 1, yy + s1) + 1.414);
+    }
+  };
+  pass(true); pass(false);
+  if (maskCache.size > 40) maskCache.clear();
+  const out = { m, d }; maskCache.set(key, out);
+  return out;
+}
+const maskMissing = (slot) => state.slots[slot - 1] ? 'Loading shape…' : `Slot ${slot} is empty`;
+
+// Mip levels: halve from 1024 so thin strokes survive heavy downscaling.
+function level(g, b) {
+  if (g.levels[b]) return g.levels[b];
+  const m = Math.max(g.w, g.h), c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(b * g.w / m)); c.height = Math.max(1, Math.round(b * g.h / m));
+  const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
+  x.drawImage(b >= 1024 ? g.img : level(g, b * 2), 0, 0, c.width, c.height);
+  return (g.levels[b] = c);
+}
+function sprite(g, color, px) {
+  let b = 16; while (b < px * 1.15 && b < 1024) b *= 2;
+  const key = b + '|' + color;
+  if (g.tints[key]) return g.tints[key];
+  const src = level(g, b);
+  if (!color) return (g.tints[key] = src);
+  if (g.ntint > 160) { g.tints = {}; g.ntint = 0; }
+  const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  const x = c.getContext('2d'); x.drawImage(src, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = color; x.fillRect(0, 0, c.width, c.height);
+  g.ntint++;
+  return (g.tints[key] = c);
+}
+
+// ---------------- Painters (canvas + SVG share one drawing API) ----------------
+// All tools draw in a 1000 x 1000 logical space.
+function canvasPainter(ctx, k) {
+  let count = 0;
+  return {
+    get count() { return count; },
+    rect(color) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.fillStyle = color; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); },
+    poly(pts, fill, stroke, lw, alpha = 1) {
+      ctx.setTransform(k, 0, 0, k, 0, 0); ctx.globalAlpha = alpha;
+      ctx.beginPath(); ctx.moveTo(pts[0], pts[1]);
+      for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+      ctx.closePath();
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke && lw > 0) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.stroke(); }
+      count++;
+    },
+    glyph(g, m, w, h, color, alpha = 1) {
+      const det = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
+      const sp = sprite(g, color, Math.max(w, h) * det * k);
+      ctx.setTransform(k * m[0], k * m[1], k * m[2], k * m[3], k * m[4], k * m[5]); ctx.globalAlpha = alpha;
+      ctx.drawImage(sp, -w / 2, -h / 2, w, h);
+      count++;
+    },
+  };
+}
+function svgPainter() {
+  const out = [], syms = new Map(), filters = new Map(); let count = 0, bg = null;
+  const r = (n) => +n.toFixed(2);
+  return {
+    get count() { return count; },
+    rect(color) { bg = color; },
+    poly(pts, fill, stroke, lw, alpha = 1) {
+      let d = 'M' + r(pts[0]) + ' ' + r(pts[1]);
+      for (let i = 2; i < pts.length; i += 2) d += 'L' + r(pts[i]) + ' ' + r(pts[i + 1]);
+      out.push(`<path d="${d}Z" fill="${fill || 'none'}"${stroke && lw > 0 ? ` stroke="${stroke}" stroke-width="${r(lw)}" stroke-linejoin="round"` : ''}${alpha < 1 ? ` opacity="${r(alpha)}"` : ''}/>`);
+      count++;
+    },
+    glyph(g, m, w, h, color, alpha = 1) {
+      if (!syms.has(g.key)) syms.set(g.key, { id: 's' + syms.size, g });
+      const id = syms.get(g.key).id;
+      let f = '';
+      if (color) { if (!filters.has(color)) filters.set(color, 'f' + filters.size); f = ` filter="url(#${filters.get(color)})"`; }
+      out.push(`<use href="#${id}" x="${r(-w / 2)}" y="${r(-h / 2)}" width="${r(w)}" height="${r(h)}" transform="matrix(${m.map((v) => +v.toFixed(4)).join(' ')})"${f}${alpha < 1 ? ` opacity="${r(alpha)}"` : ''}/>`);
+      count++;
+    },
+    finish() {
+      const defs = [...syms.values()].map(({ id, g }) => `<symbol id="${id}" viewBox="${g.vb.join(' ')}" preserveAspectRatio="xMidYMid meet" overflow="visible">${g.inner}</symbol>`)
+        .concat([...filters].map(([c, id]) => `<filter id="${id}" x="-10%" y="-10%" width="120%" height="120%"><feFlood flood-color="${c}"/><feComposite in2="SourceGraphic" operator="in"/></filter>`));
+      return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 1000" width="1000" height="1000">\n<defs>\n${defs.join('\n')}\n</defs>\n${bg ? `<rect width="1000" height="1000" fill="${bg}"/>\n` : ''}${out.join('\n')}\n</svg>`;
+    },
+  };
+}
+const rotM = (a, x, y, s = 1) => { const c = Math.cos(a) * s, n = Math.sin(a) * s; return [c, n, -n, c, x, y]; };
+
+// ---------------- Texture ----------------
+function drawTexture(pt, p, C, time) {
+  pt.rect(C.paper);
+  const slots = [0, 1, 2].filter((i) => p.use[i] && state.slots[i]);
+  if (!slots.length) return 'Turn on at least one filled slot';
+  const gl = slots.map((i) => G(i, p.thickness, p.mode));
+  const s = p.spacing, th = p.tilt * D2R, D = 1500, cosT = Math.cos(th), sinT = Math.sin(th);
+  const extra = 1.25 + 3 * sinT + Math.max(0, -p.bulge / 100) * 0.8 + (p.twist ? 0.45 : 0) + Math.abs(p.scaleRamp / 100) * 0.6;
+  const n = Math.min(70, Math.ceil(500 * extra / s) + 2);
+  const k = p.scaleRamp / 100 * 2.5, ek = Math.exp(k) - 1;
+  const warp = (t) => Math.abs(k) < 1e-3 ? [t, 1] : [(Math.exp(k * t) - 1) / ek, k * Math.exp(k * t) / ek];
+  const dir = p.rampDir;
+  const axisT = (x, y) => dir === 'horizontal' ? (x + 500) / 1000 : dir === 'vertical' ? (y + 500) / 1000 : dir === 'diagonal' ? ((x + y) / 2 + 500) / 1000 : Math.hypot(x, y) / 707;
+  const phase = time * TAU, wf = TAU * p.waveFreq / 1000;
+  const items = [];
+  for (let j = -n; j <= n; j++) for (let i = -n; i <= n; i++) {
+    let x = (i + fract(j * p.rowOffset / 100)) * s, y = (j + fract(i * p.colOffset / 100)) * s;
+    let scale = 1, rot = p.rot + i * p.rotCol + j * p.rotRow;
+    if (k) {
+      if (dir === 'radial') { const r = Math.hypot(x, y) / 707; if (r > 1e-6) { const [r2, d] = warp(r); x *= r2 / r; y *= r2 / r; scale *= d; } }
+      else {
+        const t = axisT(x, y), [t2, d] = warp(t), delta = (t2 - t) * 1000;
+        if (dir === 'horizontal') x += delta; else if (dir === 'vertical') y += delta; else { x += delta; y += delta; }
+        scale *= d;
+      }
+    }
+    const sizeMul = Math.max(0, 1 + p.sizeRamp / 100 * (clamp(axisT(x, y), 0, 1) * 2 - 1));
+    if (p.twist) { const r = Math.min(1.5, Math.hypot(x, y) / 707), a = p.twist * r * D2R, c = Math.cos(a), sn = Math.sin(a); [x, y] = [x * c - y * sn, x * sn + y * c]; rot += p.twist * r; }
+    if (p.bulge) { const b = p.bulge / 100, r = Math.hypot(x, y) / 500; if (r > 1e-6) { const f = r * (1 + b * Math.exp(-2 * r * r)); x *= f / r; y *= f / r; scale *= Math.max(0.05, f / r); } }
+    const z = p.waveAmp ? p.waveAmp * Math.sin(wf * (x * 0.6 + y) + phase) : 0;
+    const y3 = y * cosT - z * sinT, z3 = y * sinT + z * cosT, dz = D - z3;
+    if (dz < 120) continue;
+    const persp = D / dz, sx = 500 + x * persp, sy = 500 + y3 * persp;
+    const size = p.size / 100 * s * scale * sizeMul * persp;
+    if (size < 0.25) continue;
+    const reach = size + p.extrude * persp;
+    if (sx < -reach || sx > 1000 + reach || sy < -reach || sy > 1000 + reach) continue;
+    let si;
+    const L = slots.length, mod = (v) => ((v % L) + L) % L;
+    switch (p.order) {
+      case 'sequence': si = mod(i + j * (2 * n + 1)); break;
+      case 'row': si = mod(j); break;
+      case 'col': si = mod(i); break;
+      case 'random': si = Math.floor(hash3(i, j, 0, p.seed) * L); break;
+      default: si = mod(i + j);
+    }
+    const alpha = p.fog ? clamp(1 - (p.fog / 100) * clamp((1 - persp) * 2.6 + 0.08, 0, 1), 0, 1) : 1;
+    if (alpha <= 0.01) continue;
+    items.push({ sx, sy, size, rot: rot * D2R, si, z3, alpha, persp });
+  }
+  if (p.tilt || p.waveAmp || p.extrude) items.sort((a, b) => a.z3 - b.z3);
+  const layers = p.extrude > 0 ? Math.max(2, Math.min(28, Math.ceil(p.extrude), Math.floor(90000 / Math.max(1, items.length)))) : 0;
+  const ea = p.extrudeAngle * D2R, ex = Math.cos(ea), ey = Math.sin(ea);
+  for (const it of items) {
+    const g = gl[it.si]; if (!g) continue;
+    const color = C.slot[slots[it.si]], [w, h] = fitDims(g, it.size);
+    if (layers) {
+      const shade = color ? mix(color, C.paper, 0.55) : null;
+      for (let q = layers; q >= 1; q--) {
+        const off = p.extrude * q / layers * it.persp;
+        pt.glyph(g, rotM(it.rot, it.sx + ex * off, it.sy + ey * off), w, h, shade, it.alpha * (color ? 1 : 0.5));
+      }
+    }
+    pt.glyph(g, rotM(it.rot, it.sx, it.sy), w, h, color, it.alpha);
+  }
+}
+
+// ---------------- Isometric helpers ----------------
+const ISO_X = Math.cos(Math.PI / 6);
+const proj = (x, y, z) => [(x - y) * ISO_X, (x + y) * 0.5 - z];
+function fitter(minX, maxX, minY, maxY, margin = 70) {
+  const sc = (1000 - margin * 2) / Math.max(maxX - minX, maxY - minY, 1e-6);
+  const ox = 500 - (minX + maxX) / 2 * sc, oy = 500 - (minY + maxY) / 2 * sc;
+  return { sc, P: (x, y, z) => { const q = proj(x, y, z); return [ox + q[0] * sc, oy + q[1] * sc]; } };
+}
+function faceShades(style, C) {
+  switch (style) {
+    case 'outline': return { top: C.paper, l: C.paper, r: C.paper, edge: C.ink, decal: C.ink, lw: 1.1 };
+    case 'wire': return { top: null, l: null, r: null, edge: C.ink, decal: C.ink, lw: 0.9 };
+    case 'silhouette': return { top: C.ink, l: C.ink, r: C.ink, edge: C.paper, decal: C.paper, lw: 0.9 };
+    default: return { top: mix(C.paper, C.ink, 0.92), l: mix(C.paper, C.ink, 0.6), r: mix(C.paper, C.ink, 0.34), edge: C.paper, decal: C.paper, lw: 0.6 };
+  }
+}
+// Draws one box. Faces: top (+z), right (+x), left (+y). Decal maps the SVG onto faces with an affine transform.
+function drawBox(pt, F, x0, y0, z0, x1, y1, z1, sh, lwScale, deco) {
+  const P = F.P, lw = sh.lw * lwScale;
+  const T00 = P(x0, y0, z1), T10 = P(x1, y0, z1), T11 = P(x1, y1, z1), T01 = P(x0, y1, z1);
+  const B10 = P(x1, y0, z0), B11 = P(x1, y1, z0), B01 = P(x0, y1, z0);
+  if (sh.top === null) { // see-through wireframe: also outline the hidden faces
+    const B00 = P(x0, y0, z0);
+    pt.poly([...B00, ...B10, ...B11, ...B01], null, sh.edge, lw * 0.6, 0.45);
+    pt.poly([...B00, ...T00], null, sh.edge, lw * 0.6, 0.45);
+  }
+  pt.poly([...B01, ...B11, ...T11, ...T01], sh.l, sh.edge, lw);
+  pt.poly([...B10, ...B11, ...T11, ...T10], sh.r, sh.edge, lw);
+  pt.poly([...T00, ...T10, ...T11, ...T01], sh.top, sh.edge, lw);
+  if (deco) {
+    const put = (A, B, Dd) => {
+      const U = [B[0] - A[0], B[1] - A[1]], V = [Dd[0] - A[0], Dd[1] - A[1]];
+      pt.glyph(deco.g, [U[0], U[1], V[0], V[1], A[0] + (U[0] + V[0]) / 2, A[1] + (U[1] + V[1]) / 2], deco.w, deco.h, deco.color);
+    };
+    put(T00, T10, T01);
+    if (deco.all) { put(T01, T11, B01); put(T11, T10, B11); }
+  }
+}
+function makeDecal(p, sh) {
+  if (!p.decal || !state.slots[p.decal - 1]) return null;
+  const g = G(p.decal - 1, p.thickness, p.mode); if (!g) return null;
+  const [w, h] = fitDims(g, p.decalSize / 100);
+  const C = palette();
+  const color = C.slot[0] === null ? null : (state.colors.per ? C.slot[p.decal - 1] : sh.decal);
+  return { g, w, h, color, all: p.decalFaces === 'all' };
+}
+
+// ---------------- Isometric field ----------------
+function drawIso(pt, p, C, time) {
+  pt.rect(C.paper);
+  seedNoise(p.seed);
+  const N = p.grid, f = 3 / p.noiseScale, maxH = N * 0.4 * p.height;
+  let M = null;
+  if (p.source !== 'noise') { M = getMask(p.maskSlot - 1, N, N, p.invert); if (!M) return maskMissing(p.maskSlot); }
+  const H = [];
+  let top = 0.01;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    let v = 0, amp = 1, norm = 0;
+    for (let o = 0; o < p.octaves; o++) { const fr = f * (1 << o); v += noise3(i * fr + 0.31, j * fr + 0.17, time + o * 7.1) * amp; norm += amp; amp *= 0.5; }
+    const hn = clamp(0.5 + v / norm * 1.1, 0, 1);
+    let h01 = hn;
+    if (M) {
+      const idx = j * N + i;
+      if (M.m[idx]) {
+        if (p.source === 'mask') h01 = 0.6;
+        else if (p.source === 'maskNoise') h01 = 0.2 + hn * 0.8;
+        else { const t = Math.min(M.d[idx], p.maskDepth) / p.maskDepth; h01 = Math.sqrt(1 - (1 - t) * (1 - t)); }
+      } else {
+        if (p.outside === 'hide') { H.push(-1); continue; }
+        h01 = p.outside === 'floor' ? 0 : hn * 0.45;
+      }
+    }
+    if (p.steps > 0) h01 = Math.round(h01 * p.steps) / p.steps;
+    h01 = Math.max(h01, p.floor / 100);
+    let h = h01 * maxH;
+    if (p.style === 'stacked') h = Math.max(1, Math.round(h)) ;
+    h = Math.max(h, 0.06);
+    H.push(h); top = Math.max(top, h);
+  }
+  const ext = proj(N, 0, 0)[0];
+  const F = fitter(-ext, ext, -top, N, 70);
+  const sh = faceShades(p.style === 'stacked' || p.style === 'tiles' ? 'solid' : p.style, C);
+  const deco = makeDecal(p, sh);
+  const c = p.cube / 100, pad = (1 - c) / 2, lwS = Math.max(0.5, F.sc / 30);
+  for (let sum = 0; sum <= 2 * (N - 1); sum++) {
+    for (let i = Math.max(0, sum - N + 1); i <= Math.min(N - 1, sum); i++) {
+      const j = sum - i, h = H[j * N + i];
+      if (h < 0) continue;
+      const x0 = i + pad, y0 = j + pad, x1 = x0 + c, y1 = y0 + c;
+      if (p.style === 'stacked') {
+        for (let L = 0; L < h; L++) drawBox(pt, F, x0, y0, L, x1, y1, L + c, sh, lwS, L === h - 1 ? deco : (deco && deco.all ? deco : null));
+      } else if (p.style === 'tiles') {
+        drawBox(pt, F, x0, y0, h - 0.12 * c, x1, y1, h, sh, lwS, deco);
+      } else {
+        drawBox(pt, F, x0, y0, 0, x1, y1, h, sh, lwS, deco);
+      }
+    }
+  }
+}
+
+// ---------------- Cube grid ----------------
+function drawCubes(pt, p, C, time) {
+  pt.rect(C.paper);
+  seedNoise(p.seed);
+  const N = p.grid, Lz = p.layers, c = 1 - p.gap / 100, pad = (1 - c) / 2, f = 1 / p.noiseScale * 2.2;
+  const thr = (0.5 - p.density) * 0.9, lift = p.lift / 100;
+  let X = N, Y = N, Z = Lz, M = null;
+  if (p.fill === 'svg') {
+    M = getMask(p.maskSlot - 1, N, N); if (!M) return maskMissing(p.maskSlot);
+    if (p.orient === 'left') { Y = Lz; Z = N; } else if (p.orient === 'right') { X = Lz; Z = N; }
+  }
+  const cxx = X / 2, cyy = Y / 2, czz = Z / 2;
+  const list = [];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (let z = 0; z < Z; z++) for (let y = 0; y < Y; y++) for (let x = 0; x < X; x++) {
+    let on;
+    if (M) {
+      const u = p.orient === 'right' ? Y - 1 - y : x, v = p.orient === 'floor' ? y : Z - 1 - z;
+      on = M.m[v * N + u] === 1 && (p.density >= 1 || hash3(x, y, z, p.seed) < p.density);
+    }
+    else if (p.fill === 'all') on = true;
+    else if (p.fill === 'perlin') on = noise3(x * f + 0.5, y * f + 0.5, z * f + 0.5 + time) > thr;
+    else on = hash3(x, y, z, p.seed) < p.density;
+    if (!on) continue;
+    let px = x + pad, py = y + pad, pz = z * (1 + lift) + pad;
+    if (p.disp > 0) {
+      const dx = x + 0.5 - cxx, dy = y + 0.5 - cyy, dz = z + 0.5 - czz;
+      const amt = p.disp * (0.4 + (noise3(x * f * 1.7 + 3.3, y * f * 1.7, z * f * 1.7 + time * 0.7) * 0.5 + 0.5) * 1.2);
+      px += dx * amt * 0.5; py += dy * amt * 0.5; pz += dz * amt * 0.5;
+    }
+    list.push([px, py, pz]);
+    const a = proj(px, py + c, pz + c), b = proj(px + c, py, pz), t = proj(px, py, pz + c), u = proj(px + c, py + c, pz);
+    minX = Math.min(minX, a[0]); maxX = Math.max(maxX, b[0]); minY = Math.min(minY, t[1]); maxY = Math.max(maxY, u[1]);
+  }
+  if (!list.length) return 'No cubes at this density';
+  list.sort((A, B) => (A[0] + A[1] + A[2]) - (B[0] + B[1] + B[2]));
+  const F = fitter(minX, maxX, minY, maxY, 70);
+  const sh = faceShades(p.style, C), deco = makeDecal(p, sh), lwS = Math.max(0.45, F.sc / 30);
+  for (const [x, y, z] of list) drawBox(pt, F, x, y, z, x + c, y + c, z + c, sh, lwS, deco);
+}
+
+// ---------------- Flow field ----------------
+function drawFlow(pt, p, C, time) {
+  pt.rect(C.paper);
+  seedNoise(p.seed);
+  const si = p.slot - 1; if (!state.slots[si]) return 'Slot ' + p.slot + ' is empty';
+  const g = G(si, p.thickness, p.mode); if (!g) return;
+  const N = p.grid, pad = 70, cell = (1000 - pad * 2) / N, freq = p.flow / 100;
+  const [w, h] = fitDims(g, cell * p.size / 100);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const sx = p.mirror ? Math.abs(i - (N - 1) / 2) : i;
+    let a = noise3(sx * freq + 0.31, j * freq + 0.17, time) * Math.PI * p.turb + p.rot * D2R;
+    if (p.mirror && i < (N - 1) / 2) a = Math.PI - a;
+    pt.glyph(g, rotM(a, pad + (i + 0.5) * cell, pad + (j + 0.5) * cell), w, h, C.slot[si]);
+  }
+}
+// ---------------- Iso extrude (true 3D camera) ----------------
+// Base plane frames in world space (z up): [U (grid x), V (grid y), normal].
+const PLANES = {
+  floor: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+  left: [[1, 0, 0], [0, 0, -1], [0, 1, 0]],
+  right: [[0, -1, 0], [0, 0, -1], [1, 0, 0]],
+};
+const v3 = (a, b, s) => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
+const vs = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const norm3 = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+// Rotate v around unit axis k by angle a (Rodrigues).
+function rot3(v, k, a) {
+  const c = Math.cos(a), s = Math.sin(a), kv = cross3(k, v), kd = dot3(k, v) * (1 - c);
+  return [v[0] * c + kv[0] * s + k[0] * kd, v[1] * c + kv[1] * s + k[1] * kd, v[2] * c + kv[2] * s + k[2] * kd];
+}
+function camera(yaw, pitch, roll) {
+  const ps = clamp(pitch, -89.9, 89.9) * D2R, yw = yaw * D2R;
+  const e = [Math.cos(ps) * Math.cos(yw), Math.cos(ps) * Math.sin(yw), Math.sin(ps)]; // toward the eye
+  let r = norm3([e[1], -e[0], 0]), u = cross3(r, e);
+  if (roll) { r = rot3(r, e, roll * D2R); u = rot3(u, e, roll * D2R); }
+  return { e, r, u };
+}
+function drawExtrude(pt, p, C, time) {
+  pt.rect(C.paper);
+  seedNoise(p.seed);
+  const slots = [0, 1, 2].filter((i) => p.use[i] && state.slots[i]);
+  if (!slots.length) return 'Turn on at least one filled slot';
+  const gl = slots.map((i) => G(i, p.thickness, p.mode));
+  if (gl.some((g) => !g)) return 'Loading shape…';
+  const anim = p.anim ? p.animMode : '';
+  const cam = camera(p.yaw + (anim === 'spin' ? time * 90 : 0), p.pitch, p.roll);
+  const [U0, V0, N0] = PLANES[p.plane], L = slots.length;
+  const cols = p.cols, rows = p.rows, sp = p.spacing / 100;
+  const Ex = Math.max(cols, rows) * sp / 2 || 1;
+  const k = p.scaleRamp / 100 * 2.5, ek = Math.exp(k) - 1;
+  const warp = (t) => Math.abs(k) < 1e-3 ? [t, 1] : [(Math.exp(k * t) - 1) / ek, k * Math.exp(k * t) / ek];
+  const dir = p.rampDir;
+  const axisT = (x, y) => dir === 'horizontal' ? (x + Ex) / (2 * Ex) : dir === 'vertical' ? (y + Ex) / (2 * Ex) : dir === 'diagonal' ? ((x + y) / 2 + Ex) / (2 * Ex) : Math.hypot(x, y) / (Ex * 1.4142);
+  const items = [];
+  let R = 0.5;
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    let x = (i - (cols - 1) / 2 + fract(j * p.rowOffset / 100)) * sp, y = (j - (rows - 1) / 2 + fract(i * p.colOffset / 100)) * sp;
+    let scale = 1;
+    if (k) {
+      if (dir === 'radial') { const rr = Math.hypot(x, y) / (Ex * 1.4142); if (rr > 1e-6) { const [r2, d] = warp(rr); x *= r2 / rr; y *= r2 / rr; scale *= d; } }
+      else {
+        const t = axisT(x, y), [t2, d] = warp(t), delta = (t2 - t) * 2 * Ex;
+        if (dir === 'horizontal') x += delta; else if (dir === 'vertical') y += delta; else { x += delta; y += delta; }
+        scale *= d;
+      }
+    }
+    const tr = clamp(axisT(x, y), 0, 1) * 2 - 1; // -1 … 1 along the ramp
+    const size = p.size / 100 * scale * Math.max(0, 1 + p.sizeRamp / 100 * tr);
+    if (size < 0.005) continue;
+    const si = (() => {
+      const mod = (v) => ((v % L) + L) % L;
+      switch (p.order) { case 'sequence': return mod(i + j * cols); case 'row': return mod(j); case 'col': return mod(i); case 'random': return Math.floor(hash3(i, j, 1, p.seed) * L); default: return mod(i + j); }
+    })();
+    // Shape frame: rotate in plane, then tilt around its own axes.
+    const a = (p.rot + i * p.rotCol + j * p.rotRow) * D2R;
+    let U = rot3(U0, N0, a), V = rot3(V0, N0, a), N = N0;
+    const tx = (p.tiltX + j * p.tiltRow + p.tiltRamp * (tr + 1) / 2 + (anim === 'tilt' ? time * 180 : 0)) * D2R, ty = (p.tiltY + i * p.tiltCol) * D2R;
+    if (tx) { V = rot3(V, U, tx); N = rot3(N, U, tx); }
+    if (ty) { U = rot3(U, V, ty); N = rot3(N, V, ty); }
+    const wave = p.waveAmp ? p.waveAmp / 100 * Math.sin(TAU * p.waveFreq * (x * 0.6 + y) / (2 * Ex) * 2 + (anim === 'wave' ? time * TAU : 0)) : 0;
+    const c = v3(v3(v3([0, 0, 0], U0, x), V0, y), N0, wave);
+    let d = p.depth / 100 * Math.max(0, 1 + p.depthRamp / 100 * tr);
+    if (p.depthNoise) d *= clamp(1 + (p.depthNoise / 100) * noise3(i * 0.45 + 0.3, j * 0.45 + 0.7, anim === 'depth' ? time : 0) * 1.8, 0.03, 3);
+    else if (anim === 'depth') d *= 0.55 + 0.45 * Math.sin(time * TAU + (i + j) * 0.5);
+    const g = gl[si], [w, h] = fitDims(g, size);
+    items.push({ c, U, V, N, w, h, d, si });
+    R = Math.max(R, Math.hypot(...c) + Math.max(w, h) * 0.75 + d);
+  }
+  // Rotation-invariant fit, so spinning the camera never rescales the scene.
+  const sc = 430 / R * p.zoom / 100;
+  const Dcam = p.persp > 0 ? R * (1.4 + 14 * Math.pow(1 - p.persp / 100, 2)) : Infinity;
+  const project = (P) => {
+    const depth = dot3(P, cam.e), f = isFinite(Dcam) ? Dcam / Math.max(Dcam - depth, R * 0.05) : 1;
+    return { x: 500 + dot3(P, cam.r) * sc * f, y: 500 - dot3(P, cam.u) * sc * f, f, depth };
+  };
+  const pv = (v, f) => [dot3(v, cam.r) * sc * f, -dot3(v, cam.u) * sc * f];
+  for (const it of items) it.z = dot3(it.c, cam.e) + dot3(it.N, cam.e) * it.d / 2;
+  items.sort((A, B) => A.z - B.z);
+  const maxLayers = Math.max(2, Math.min(180, Math.floor(70000 / Math.max(1, items.length))));
+  const Lgt = norm3(v3(v3(cam.e, cam.u, 0.9), cam.r, -0.6)); // light from upper left of the view
+  for (const it of items) {
+    const g = gl[it.si], color = C.slot[slots[it.si]];
+    const facing = dot3(it.N, cam.e) >= 0;
+    const lam = Math.abs(dot3(it.N, Lgt));
+    const cap = color ? mix(C.paper, color, clamp(1 - p.light / 100 * (1 - lam) * 0.8, 0.15, 1)) : null;
+    const s0 = color ? mix(color, C.paper, p.tone / 100) : null, s1 = color ? mix(color, C.paper, p.tone / 100 * 0.55) : null;
+    const pxDepth = it.d * sc * Math.sqrt(Math.max(0, 1 - dot3(it.N, cam.e) ** 2)) + it.d * sc * 0.15;
+    const layers = it.d > 0 ? Math.min(maxLayers, Math.max(2, Math.ceil(pxDepth / 1.1) + (p.twist || p.taper !== 100 ? 6 : 0))) : 0;
+    const drawLayer = (t, col) => {
+      const tw = p.twist * t * D2R, s = lerp(1, p.taper / 100, t);
+      if (s <= 0.001) return;
+      const Ul = tw ? rot3(it.U, it.N, tw) : it.U, Vl = tw ? rot3(it.V, it.N, tw) : it.V;
+      const q = project(v3(it.c, it.N, it.d * t));
+      const a = pv(Ul, q.f * s), b = pv(Vl, q.f * s);
+      pt.glyph(g, [a[0], a[1], b[0], b[1], q.x, q.y], it.w, it.h, col, color ? 1 : 0.6);
+    };
+    // Draw away-from-viewer layers first; the cap nearest the viewer gets the full color.
+    for (let n = 0; n < layers; n++) {
+      const t = facing ? n / layers : 1 - n / layers;
+      const col = color ? mix(s0, s1, Math.floor((facing ? t : 1 - t) * 6) / 6) : null;
+      drawLayer(t, col);
+    }
+    drawLayer(facing ? 1 : 0, cap);
+  }
+}
+const DRAW = { texture: drawTexture, iso: drawIso, cubes: drawCubes, extrude: drawExtrude, flow: drawFlow };
+
+// ---------------- Render loop ----------------
+const cv = $('cv'), ctx = cv.getContext('2d');
+let time = 0, raf = 0, lastTs = 0, queued = false;
+function render() {
+  queued = false;
+  const t0 = performance.now();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2), W = cv.clientWidth;
+  if (!W) return;
+  const px = Math.round(W * dpr);
+  if (cv.width !== px) { cv.width = px; cv.height = px; }
+  const pt = canvasPainter(ctx, px / 1000);
+  const msg = DRAW[state.tab](pt, P(), palette(), time);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+  $('stats').textContent = msg || `${pt.count.toLocaleString()} elements`;
+  $('renderMs').textContent = Math.round(performance.now() - t0) + ' ms';
+}
+function requestRender() { if (!queued) { queued = true; requestAnimationFrame(render); } }
+function tick(ts) {
+  const p = P();
+  if (!p.anim) { raf = 0; return; }
+  const dt = lastTs ? Math.min(0.1, (ts - lastTs) / 1000) : 0; lastTs = ts;
+  time += dt * p.speed;
+  render();
+  raf = requestAnimationFrame(tick);
+}
+function syncAnim() { if (P().anim && !raf) { lastTs = 0; raf = requestAnimationFrame(tick); } }
+
+// ---------------- Controls ----------------
+const fmtDefault = (v) => (Number.isInteger(+v) ? v : (+v).toFixed(2));
+let whenList = [];
+function buildControls() {
+  const box = $('controls'); box.innerHTML = ''; whenList = [];
+  const p = P(); let sec = null;
+  for (const it of SCHEMA[state.tab]) {
+    if (it.group) {
+      sec = document.createElement('div'); sec.className = 'section';
+      const h = document.createElement('h2'); h.textContent = it.group;
+      if (it.tag) { const tg = document.createElement('span'); tg.className = 'tag3d'; tg.textContent = it.tag; tg.style.marginLeft = '8px'; h.append(tg); }
+      sec.append(h); box.append(sec); continue;
+    }
+    const el = controlEl(it, p);
+    if (it.when) whenList.push([el, it.when]);
+    sec.append(el);
+  }
+  applyWhen();
+  document.querySelectorAll('#tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === state.tab)));
+  $('about').textContent = ABOUT[state.tab];
+}
+function applyWhen() { const p = P(); for (const [el, fn] of whenList) el.hidden = !fn(p); }
+function changed() { applyWhen(); save(); syncAnim(); requestRender(); }
+function controlEl(it, p) {
+  const id = `${state.tab}-${it.k || 'hint'}`;
+  const wrap = document.createElement('div');
+  if (it.t === 'hint') { wrap.className = 'hint'; wrap.textContent = it.text; return wrap; }
+  if (it.t === 'range') {
+    wrap.className = 'ctl';
+    wrap.innerHTML = `<label for="${id}"></label><input type="range" id="${id}" min="${it.min}" max="${it.max}" step="${it.step}"><output for="${id}"></output>`;
+    wrap.querySelector('label').textContent = it.label;
+    const inp = wrap.querySelector('input'), out = wrap.querySelector('output'), fmt = it.fmt || fmtDefault;
+    inp.value = p[it.k]; out.textContent = fmt(p[it.k]);
+    inp.addEventListener('input', () => { p[it.k] = +inp.value; out.textContent = fmt(p[it.k]); changed(); });
+    inp.addEventListener('dblclick', () => { p[it.k] = it.def; inp.value = it.def; out.textContent = fmt(it.def); changed(); });
+    inp.title = 'Double-click to reset';
+    return wrap;
+  }
+  if (it.t === 'select' || it.t === 'slot') {
+    wrap.className = 'row';
+    const opts = it.t === 'slot' ? [...(it.noNone ? [] : [[0, 'None']]), [1, 'Slot 1'], [2, 'Slot 2'], [3, 'Slot 3']] : it.opts;
+    wrap.innerHTML = `<label class="lbl" for="${id}"></label><select id="${id}"></select>`;
+    wrap.querySelector('label').textContent = it.label;
+    const sel = wrap.querySelector('select');
+    for (const [v, l] of opts) { const o = document.createElement('option'); o.value = v; o.textContent = l; sel.append(o); }
+    sel.value = p[it.k];
+    sel.addEventListener('change', () => { p[it.k] = it.t === 'slot' ? +sel.value : sel.value; changed(); });
+    return wrap;
+  }
+  if (it.t === 'check') {
+    wrap.innerHTML = `<label class="toggle"><input type="checkbox" id="${id}"> <span></span></label>`;
+    wrap.querySelector('span').textContent = it.label;
+    const cb = wrap.querySelector('input'); cb.checked = !!p[it.k];
+    cb.addEventListener('change', () => { p[it.k] = cb.checked; changed(); });
+    return wrap;
+  }
+  if (it.t === 'seed') {
+    wrap.className = 'row';
+    wrap.innerHTML = `<label class="lbl" for="${id}"></label><input type="number" id="${id}" min="0" max="99999" step="1"><button class="btn" type="button">Shuffle</button>`;
+    wrap.querySelector('label').textContent = it.label;
+    const inp = wrap.querySelector('input'); inp.value = p[it.k];
+    inp.addEventListener('change', () => { p[it.k] = Math.max(0, Math.floor(+inp.value || 0)); changed(); });
+    wrap.querySelector('button').addEventListener('click', () => { p[it.k] = Math.floor(Math.random() * 99999); inp.value = p[it.k]; changed(); });
+    return wrap;
+  }
+  if (it.t === 'slots') {
+    wrap.className = 'row';
+    wrap.innerHTML = `<span class="lbl"></span><div class="chips"></div>`;
+    wrap.querySelector('.lbl').textContent = it.label;
+    const chips = wrap.querySelector('.chips');
+    for (let i = 0; i < 3; i++) {
+      const l = document.createElement('label'); l.className = 'chip';
+      l.innerHTML = `<input type="checkbox" id="${id}-${i}"> ${i + 1}`;
+      const cb = l.querySelector('input'); cb.checked = !!p[it.k][i];
+      cb.addEventListener('change', () => { p[it.k][i] = cb.checked; changed(); });
+      chips.append(l);
+    }
+    return wrap;
+  }
+  return wrap;
+}
+
+// ---------------- Slots UI ----------------
+function showErr(msg) { $('err').textContent = msg || ''; $('err').hidden = !msg; }
+let pasteTarget = 0;
+function buildSlots() {
+  const box = $('slots'); box.innerHTML = '';
+  state.slots.forEach((s, i) => {
+    const el = document.createElement('div'); el.className = 'slot';
+    el.innerHTML = `
+      <button class="slot-thumb" type="button" id="slot-${i}" aria-pressed="${state.active === i}"><span class="slot-num">${i + 1}</span>${s ? '' : 'Empty'}</button>
+      <div class="slot-name"></div>
+      <div class="slot-actions"><button type="button" data-a="upload">Upload</button><button type="button" data-a="paste">Paste</button>${s ? '<button type="button" data-a="clear">Clear</button>' : ''}</div>
+      <select id="slot-preset-${i}" aria-label="Load a preset into slot ${i + 1}"><option value="">Preset…</option>${Object.entries(PRESETS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('')}</select>`;
+    el.querySelector('.slot-name').textContent = s ? s.name : '—';
+    el.querySelector('.slot-thumb').addEventListener('click', () => { state.active = i; save(); document.querySelectorAll('.slot-thumb').forEach((b, k) => b.setAttribute('aria-pressed', String(k === i))); });
+    el.querySelector('[data-a="upload"]').addEventListener('click', () => { state.active = i; $('fileIn').click(); });
+    el.querySelector('[data-a="paste"]').addEventListener('click', () => openPaste(i));
+    el.querySelector('[data-a="clear"]')?.addEventListener('click', () => { state.slots[i] = null; afterSlotChange(); });
+    el.querySelector('select').addEventListener('change', (e) => { const pr = PRESETS[e.target.value]; if (pr) setSlot(i, pr.svg, pr.name); });
+    box.append(el);
+    if (s) drawThumb(el.querySelector('.slot-thumb'), i);
+  });
+}
+function drawThumb(btn, i) {
+  const g = G(i); if (!g) return; // re-run after load via afterLoad
+  const c = document.createElement('canvas'); c.width = 120; c.height = 120;
+  const x = c.getContext('2d'), [w, h] = fitDims(g, 92);
+  x.drawImage(level(g, 128), (120 - w) / 2, (120 - h) / 2, w, h);
+  if (!state.colors.keep) { x.globalCompositeOperation = 'source-in'; x.fillStyle = cssVar('--ink'); x.fillRect(0, 0, 120, 120); }
+  btn.querySelector('canvas')?.remove(); btn.append(c);
+}
+function refreshThumbs() { document.querySelectorAll('.slot-thumb').forEach((b, i) => state.slots[i] && drawThumb(b, i)); }
+async function setSlot(i, text, name) {
+  showErr('');
+  try { const parsed = parseSvg(text, 0, 'original'); await loadImage(parsed.serial); }
+  catch (e) { showErr(e.message); return false; }
+  const v = (state.slots[i]?.v || 0) + 1;
+  state.slots[i] = { name: (name || 'Your SVG').replace(/\.svg$/i, '').slice(0, 40), text, v };
+  state.active = i;
+  afterSlotChange();
+  toast(`Slot ${i + 1} now uses ${state.slots[i].name}`);
+  return true;
+}
+function afterSlotChange() { save(); buildSlots(); requestRender(); }
+function openPaste(i) { pasteTarget = i; $('pasteUse').textContent = `Use in slot ${i + 1}`; $('pasteBox').hidden = false; $('pasteTa').focus(); }
+$('pasteUse').addEventListener('click', async () => { const v = $('pasteTa').value.trim(); if (v && await setSlot(pasteTarget, v, 'Pasted SVG')) { $('pasteBox').hidden = true; $('pasteTa').value = ''; } });
+$('pasteCancel').addEventListener('click', () => { $('pasteBox').hidden = true; });
+function readFile(file, i) {
+  if (!file) return;
+  if (!/svg/i.test(file.type) && !/\.svg$/i.test(file.name)) { showErr('Only .svg files work here. Export the shape as SVG and try again.'); return; }
+  if (file.size > 3_000_000) { showErr('That SVG is over 3 MB. Simplify it or export with fewer points.'); return; }
+  const r = new FileReader(); r.onload = () => setSlot(i, String(r.result), file.name); r.readAsText(file);
+}
+$('fileIn').addEventListener('change', (e) => { readFile(e.target.files[0], state.active); e.target.value = ''; });
+const bed = $('bed'); let dragDepth = 0;
+bed.addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; bed.classList.add('drag'); $('dropHint').textContent = `Drop SVG into slot ${state.active + 1}`; $('dropHint').hidden = false; });
+bed.addEventListener('dragover', (e) => e.preventDefault());
+bed.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; bed.classList.remove('drag'); $('dropHint').hidden = true; } });
+bed.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; bed.classList.remove('drag'); $('dropHint').hidden = true; readFile(e.dataTransfer.files[0], state.active); });
+document.addEventListener('paste', (e) => {
+  if (e.target.closest && e.target.closest('textarea, input')) return;
+  const txt = e.clipboardData?.getData('text') || '';
+  if (/<svg[\s>]/i.test(txt)) { e.preventDefault(); setSlot(state.active, txt, 'Pasted SVG'); }
+});
+
+// ---------------- Colors UI ----------------
+function syncColorsUi() {
+  const c = state.colors;
+  $('c-page').checked = c.page; $('c-paper').value = c.paper; $('c-ink').value = c.ink;
+  $('c-per').checked = c.per; $('c-s2').value = c.s2; $('c-s3').value = c.s3; $('c-keep').checked = c.keep;
+  $('c-custom').hidden = c.page; $('c-perRow').hidden = !c.per || c.keep;
+}
+function onColor() { syncColorsUi(); save(); refreshThumbs(); requestRender(); }
+$('c-page').addEventListener('change', (e) => {
+  state.colors.page = e.target.checked;
+  if (!e.target.checked) { state.colors.paper = cssVar('--bg'); state.colors.ink = cssVar('--ink'); }
+  onColor();
+});
+for (const [id, key] of [['c-paper', 'paper'], ['c-ink', 'ink'], ['c-s2', 's2'], ['c-s3', 's3']]) $(id).addEventListener('input', (e) => { state.colors[key] = e.target.value; onColor(); });
+$('c-per').addEventListener('change', (e) => { state.colors.per = e.target.checked; onColor(); });
+$('c-keep').addEventListener('change', (e) => { state.colors.keep = e.target.checked; onColor(); });
+
+// ---------------- Tabs ----------------
+function setTab(tab) {
+  if (!tabOk(tab)) return;
+  state.tab = tab; save(); buildControls(); requestRender(); syncAnim();
+  try { history.replaceState(null, '', '#' + tab); } catch (_) {}
+}
+document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
+$('resetTab').addEventListener('click', () => { state.p[state.tab] = defaultsFor(state.tab); time = 0; save(); buildControls(); requestRender(); toast('Tool settings reset. Your slots were kept.'); });
+
+// ---------------- Export ----------------
+let toastTimer;
+function toast(msg) { $('toast').textContent = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => ($('toast').textContent = ''), 3000); }
+$('copySvg').addEventListener('click', () => {
+  const sp = svgPainter(); DRAW[state.tab](sp, P(), palette(), time);
+  const s = sp.finish();
+  navigator.clipboard.writeText(s).then(
+    () => toast(`SVG copied (${sp.count.toLocaleString()} elements). Paste into Figma, Illustrator or a .svg file.`),
+    () => { $('pasteBox').hidden = false; $('pasteTa').value = s; $('pasteTa').select(); $('pasteUse').textContent = 'Use in slot ' + (pasteTarget + 1); toast('Clipboard was blocked. The SVG is selected in the box under the slots; press Cmd/Ctrl+C.'); });
+});
+$('copyPng').addEventListener('click', () => {
+  render();
+  try {
+    const item = new ClipboardItem({ 'image/png': new Promise((res) => cv.toBlob(res, 'image/png')) });
+    navigator.clipboard.write([item]).then(() => toast('PNG copied to the clipboard.'), () => toast('Clipboard was blocked. Right-click the pattern and choose Save Image instead.'));
+  } catch (_) { toast('Clipboard was blocked. Right-click the pattern and choose Save Image instead.'); }
+});
+
+// ---------------- Theme + resize ----------------
+const onTheme = () => { requestRender(); refreshThumbs(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', onTheme);
+new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+new ResizeObserver(requestRender).observe(bed);
+
+// ---------------- Boot ----------------
+restore();
+const hashTab = (location.hash || '').slice(1);
+if (tabOk(hashTab)) state.tab = hashTab;
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) for (const t in state.p) state.p[t].anim = false;
+buildSlots(); syncColorsUi(); buildControls(); render(); syncAnim();
+document.fonts?.ready.then(requestRender);
+})();
+</script>
