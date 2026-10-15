@@ -69,12 +69,14 @@ main.grid {
   display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px;
   font-family: var(--font-data); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums;
 }
-.looks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.look { appearance: none; font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 1px solid var(--rule); padding: 7px 14px; cursor: pointer; }
-.look:hover:not(:disabled) { border-color: var(--muted); }
+.looks-wrap { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+.looks-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.looks { display: flex; flex-wrap: wrap; gap: 8px; }
+.look { appearance: none; font: inherit; font-size: 14px; font-weight: 500; color: var(--ink); background: var(--surface); border: 1px solid var(--muted); padding: 10px 18px; cursor: pointer; transition: background 0.12s, border-color 0.12s; }
+.look:hover:not(:disabled) { border-color: var(--ink); background: color-mix(in srgb, var(--surface) 70%, var(--ink) 8%); }
 .look[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.look:disabled { color: var(--muted); border-style: dashed; cursor: default; }
-.actions { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+.look:disabled { color: var(--muted); background: transparent; border-color: var(--rule); border-style: dashed; font-weight: 400; cursor: default; }
+.actions { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 36px; align-items: center; }
 .dlpng { display: inline-flex; gap: 8px; align-items: center; }
 .dlpng select { font-size: 12px; padding: 3px 6px; }
 .toast { font-size: 12px; color: var(--accent); min-height: 1em; margin: 8px 0 0; }
@@ -161,7 +163,10 @@ input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid
         <div class="drop-hint" id="dropHint" hidden>Drop SVG into the selected slot</div>
       </div>
       <div class="meta"><span id="stats">–</span><span id="renderMs"></span></div>
-      <div class="looks" id="looks" role="group" aria-label="Texture presets"></div>
+      <div class="looks-wrap">
+        <span class="looks-label" id="looksLabel">Presets</span>
+        <div class="looks" id="looks" role="group" aria-labelledby="looksLabel"></div>
+      </div>
       <div class="actions">
         <button class="linkbtn" id="copySvg" type="button">Copy as SVG</button>
         <button class="linkbtn" id="copyPng" type="button">Copy as PNG</button>
