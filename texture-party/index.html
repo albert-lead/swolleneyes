@@ -1219,7 +1219,9 @@ function buildLooks() {
   }
 }
 function applyLook(l) {
-  state.p.texture = { ...defaultsFor('texture'), ...(l.p ? JSON.parse(JSON.stringify(l.p)) : {}) };
+  // Presets set the layout; your shape choices (Shapes in pattern, Arrangement) stay as they are.
+  const keep = { use: [...state.p.texture.use], order: state.p.texture.order };
+  state.p.texture = { ...defaultsFor('texture'), ...(l.p ? JSON.parse(JSON.stringify(l.p)) : {}), ...keep };
   time = 0; activeLook = l.id;
   setTab('texture'); buildControls(); buildLooks(); requestRender();
   toast(`Loaded the ${l.name} preset.`);
