@@ -70,6 +70,8 @@ main.grid {
   font-family: var(--font-data); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums;
 }
 .actions { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+.dlpng { display: inline-flex; gap: 8px; align-items: center; }
+.dlpng select { font-size: 12px; padding: 3px 6px; }
 .toast { font-size: 12px; color: var(--accent); min-height: 1em; margin: 8px 0 0; }
 .about { margin-top: 20px; color: var(--muted); line-height: 1.6; max-width: 65ch; font-size: 13px; }
 
@@ -151,6 +153,9 @@ input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid
       <div class="actions">
         <button class="linkbtn" id="copySvg" type="button">Copy as SVG</button>
         <button class="linkbtn" id="copyPng" type="button">Copy as PNG</button>
+        <button class="linkbtn" id="dlSvg" type="button">Download SVG</button>
+        <span class="dlpng"><button class="linkbtn" id="dlPng" type="button">Download PNG</button>
+          <select id="pngSize" aria-label="PNG size"><option value="1000">1000 px</option><option value="2000" selected>2000 px</option><option value="4000">4000 px</option></select></span>
         <button class="linkbtn" id="resetTab" type="button">Reset this tool</button>
       </div>
       <p class="toast" id="toast" aria-live="polite"></p>
@@ -1160,6 +1165,28 @@ $('copyPng').addEventListener('click', () => {
     const item = new ClipboardItem({ 'image/png': new Promise((res) => cv.toBlob(res, 'image/png')) });
     navigator.clipboard.write([item]).then(() => toast('PNG copied to the clipboard.'), () => toast('Clipboard was blocked. Right-click the pattern and choose Save Image instead.'));
   } catch (_) { toast('Clipboard was blocked. Right-click the pattern and choose Save Image instead.'); }
+});
+const stamp = () => new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
+function download(blob, ext) {
+  const name = `shape-studio-${state.tab}-${stamp()}.${ext}`;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  return name;
+}
+$('dlSvg').addEventListener('click', () => {
+  const sp = svgPainter(); DRAW[state.tab](sp, P(), palette(), time);
+  const name = download(new Blob([sp.finish()], { type: 'image/svg+xml' }), 'svg');
+  toast(`Saved ${name} (${sp.count.toLocaleString()} elements).`);
+});
+$('dlPng').addEventListener('click', () => {
+  const px = +$('pngSize').value;
+  const c = document.createElement('canvas'); c.width = px; c.height = px;
+  DRAW[state.tab](canvasPainter(c.getContext('2d'), px / 1000), P(), palette(), time);
+  c.toBlob((b) => {
+    if (!b) { toast('PNG export failed. Try a smaller size.'); return; }
+    toast(`Saved ${download(b, 'png')} (${px} × ${px} px).`);
+  }, 'image/png');
 });
 
 // ---------------- Theme + resize ----------------
