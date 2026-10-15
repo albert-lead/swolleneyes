@@ -100,7 +100,7 @@ main.grid {
 .slot-actions { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; }
 .slot-actions button { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .slot-actions button:hover { color: var(--ink); }
-.slot select { width: 100%; font-size: 12px; padding: 4px 6px; }
+.slot select { width: 100%; font-size: 12px; padding: 4px 6px; margin-top: auto; } /* keeps all three menus on one line */
 .pastebox textarea { width: 100%; font-family: var(--font-data); font-size: 11px; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); padding: 8px; }
 
 .btn { appearance: none; font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); padding: 7px 12px; cursor: pointer; }
@@ -183,7 +183,7 @@ input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid
             <button class="btn" id="pasteCancel" type="button">Cancel</button>
           </div>
         </div>
-        <div class="row"><button class="linkbtn" id="resetSlots" type="button">Reset slots to defaults</button></div>
+        <div class="row"><button class="btn" id="resetSlots" type="button">Reset slots</button></div>
         <p class="err" id="err" hidden></p>
         <input type="file" id="fileIn" accept=".svg,image/svg+xml" hidden>
       </div>
@@ -242,7 +242,7 @@ const SCHEMA = {
   texture: [
     { group: 'Shapes' },
     { k: 'use', t: 'slots', label: 'Shapes in pattern', def: [true, false, false] },
-    { k: 'order', t: 'select', label: 'Arrangement', def: 'checker', opts: [['checker', 'Checkerboard'], ['sequence', 'Sequence'], ['row', 'By row'], ['col', 'By column'], ['random', 'Random']] },
+    { k: 'order', t: 'select', label: 'Arrangement', def: 'checker', when: (p) => p.use.filter(Boolean).length > 1, opts: [['checker', 'Checkerboard'], ['sequence', 'Sequence'], ['row', 'By row'], ['col', 'By column'], ['random', 'Random']] },
     { k: 'size', t: 'range', label: 'Shape Size', min: 4, max: 400, step: 1, def: 22, fmt: (v) => v + ' u' },
     THICK, MODE,
     { group: 'Grid' },
@@ -321,7 +321,7 @@ const SCHEMA = {
   extrude: [
     { group: 'Shapes' },
     { k: 'use', t: 'slots', label: 'Shapes in pattern', def: [true, false, false] },
-    { k: 'order', t: 'select', label: 'Arrangement', def: 'checker', opts: [['checker', 'Checkerboard'], ['sequence', 'Sequence'], ['row', 'By row'], ['col', 'By column'], ['random', 'Random']] },
+    { k: 'order', t: 'select', label: 'Arrangement', def: 'checker', when: (p) => p.use.filter(Boolean).length > 1, opts: [['checker', 'Checkerboard'], ['sequence', 'Sequence'], ['row', 'By row'], ['col', 'By column'], ['random', 'Random']] },
     { k: 'size', t: 'range', label: 'Shape Size', min: 10, max: 250, step: 1, def: 85, fmt: (v) => v + '%' },
     THICK, MODE,
     { group: 'Grid' },
