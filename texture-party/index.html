@@ -43,6 +43,8 @@ header.top {
 }
 h1 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
 .sub { color: var(--muted); font-size: 13px; }
+.sub a { color: inherit; text-underline-offset: 3px; }
+.sub a:hover { color: var(--ink); }
 nav.tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--rule); margin-top: 20px; overflow-x: auto; }
 nav.tabs button {
   appearance: none; background: none; border: 0; font: inherit; font-size: 14px; color: var(--muted);
@@ -146,7 +148,7 @@ input[type="color"] { width: 34px; height: 30px; padding: 2px; border: 1px solid
 <div class="wrap">
   <header class="top">
     <h1>Texture Party 🎉</h1>
-    <span class="sub">Textures, extrusions and flow fields built from your own SVGs</span>
+    <span class="sub">SVG texture exploration. Inspired by <a href="https://bookofshapes.com" target="_blank" rel="noopener">Book of Shapes</a>.</span>
   </header>
   <nav class="tabs" role="tablist" id="tabs">
     <button role="tab" data-tab="texture" id="tab-texture">Texture</button>
